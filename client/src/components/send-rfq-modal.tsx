@@ -18,6 +18,16 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from '@/lib/toast';
 import {
+  RFQ_SCOPE_ORDER,
+  buildRfqPayload,
+  toRfqComposeRequest,
+  toRfqSendRequest,
+  toRfqTemplateRequest,
+  type RfqMessageContent,
+  type RfqPayload,
+  type RfqScope,
+} from '@/lib/rfqPayload';
+import {
   adminGetVendorsAll,
   adminAiComposeRfq,
   adminSendRfq,
@@ -62,7 +72,24 @@ const SCOPE_OPTIONS = [
   },
 ] as const;
 
-const SCOPE_ORDER = ['full', 'hotels', 'transport', 'cruise'];
+interface RfqComposeResponse {
+  subject: string;
+  htmlBody: string;
+}
+
+interface RfqTemplateResponse {
+  subject: string;
+  body: string;
+}
+
+interface RfqSendResponse {
+  success: boolean;
+  sentCount: number;
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export function SendRfqModal({
   isOpen,
@@ -83,7 +110,7 @@ export function SendRfqModal({
 }) {
   const [vendors, setVendors] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [rfqScope, setRfqScope] = useState<string[]>(['full']);
+  const [rfqScope, setRfqScope] = useState<RfqScope[]>(['full']);
 
   // New State for DateRange and Hotels
   const [travelDateRange, setTravelDateRange] = useState<DateRange | undefined>();
@@ -134,7 +161,7 @@ export function SendRfqModal({
 
   if (!isOpen) return null;
 
-  const toggleScope = (key: string) => {
+  const toggleScope = (key: RfqScope) => {
     setRfqScope((prev) => {
       if (prev.includes(key)) {
         if (prev.length === 1) return prev;
@@ -146,7 +173,7 @@ export function SendRfqModal({
 
   const sortedScope = [...rfqScope]
     .sort((a, b) => {
-      return SCOPE_ORDER.indexOf(a) - SCOPE_ORDER.indexOf(b);
+      return RFQ_SCOPE_ORDER.indexOf(a) - RFQ_SCOPE_ORDER.indexOf(b);
     })
     .join(',');
 
@@ -158,61 +185,74 @@ export function SendRfqModal({
       .split(',')
       .map((s: string) => s.trim())
       .sort((a: string, b: string) => {
-        return SCOPE_ORDER.indexOf(a) - SCOPE_ORDER.indexOf(b);
+        return RFQ_SCOPE_ORDER.indexOf(a as RfqScope) - RFQ_SCOPE_ORDER.indexOf(b as RfqScope);
       })
       .join(',');
     return templateTags === sortedScope;
   });
 
-  const getFormattedTravelDates = () => {
-    if (travelDateRange?.from && travelDateRange?.to) {
-      return `${format(travelDateRange.from, 'LLL dd, y')} - ${format(travelDateRange.to, 'LLL dd, y')}`;
-    }
-    return undefined;
+  const buildCurrentRfqPayload = (message?: RfqMessageContent): RfqPayload => {
+    return buildRfqPayload({
+      packageId,
+      scopes: rfqScope,
+      travelDates: travelDateRange,
+      hotelRequests: selectedHotels.map((name) => ({ name })),
+      vendorIds: rfqSelectedVendors,
+      message,
+    });
   };
 
   const handleComposeRfqAi = async () => {
     if (!auth || !packageId) return toast.error('Invalid package ID.');
+    let request;
+    try {
+      request = toRfqComposeRequest(buildCurrentRfqPayload());
+    } catch (error: unknown) {
+      return toast.error(errorMessage(error, 'Check the RFQ details.'));
+    }
     setIsRfqComposing(true);
     try {
-      const travelDates = getFormattedTravelDates();
-      const res = await adminAiComposeRfq({
-        data: { auth, packageId, scope: rfqScope, travelDates, customHotels: selectedHotels },
+      const res = await adminAiComposeRfq<RfqComposeResponse>({
+        data: { auth, ...request },
       });
       setRfqPreview({ subject: res.subject, htmlBody: res.htmlBody });
       toast.success('Draft composed by Maya.');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to compose RFQ.');
+    } catch (error: unknown) {
+      toast.error(errorMessage(error, 'Failed to compose RFQ.'));
     } finally {
       setIsRfqComposing(false);
     }
   };
 
   const proceedToCompose = () => {
-    if (rfqSelectedVendors.length === 0) return toast.error('Please select at least one vendor.');
-    if (!travelDateRange?.from || !travelDateRange?.to)
-      return toast.error('Travel dates are mandatory.');
-    setRfqPreview({ subject: '', htmlBody: '' });
+    try {
+      buildCurrentRfqPayload();
+      setRfqPreview({ subject: '', htmlBody: '' });
+    } catch (error: unknown) {
+      toast.error(errorMessage(error, 'Check the RFQ details.'));
+    }
   };
 
   const applyTemplate = async (templateId: string) => {
     if (!auth || !packageId) return;
+    let request;
+    try {
+      request = toRfqTemplateRequest(buildCurrentRfqPayload(), Number(templateId));
+    } catch (error: unknown) {
+      return toast.error(errorMessage(error, 'Check the RFQ details.'));
+    }
     setIsRenderingTemplate(true);
     try {
-      const travelDates = getFormattedTravelDates();
-      const res = await adminRenderRfqTemplate({
+      const res = await adminRenderRfqTemplate<RfqTemplateResponse>({
         data: {
           auth,
-          packageId,
-          templateId: parseInt(templateId),
-          travelDates,
-          customHotels: selectedHotels,
+          ...request,
         },
       });
       setRfqPreview({ subject: res.subject, htmlBody: res.body });
       toast.success('Template applied with package data!');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to render template.');
+    } catch (error: unknown) {
+      toast.error(errorMessage(error, 'Failed to render template.'));
     } finally {
       setIsRenderingTemplate(false);
     }
@@ -220,25 +260,28 @@ export function SendRfqModal({
 
   const handleSendRfq = async () => {
     if (!auth || !packageId || !rfqPreview) return;
+    let request;
+    try {
+      request = toRfqSendRequest(buildCurrentRfqPayload(rfqPreview));
+    } catch (error: unknown) {
+      return toast.error(errorMessage(error, 'Check the RFQ details.'));
+    }
     setIsRfqSending(true);
     try {
-      const res = await adminSendRfq({
+      const res = await adminSendRfq<RfqSendResponse>({
         data: {
           auth,
-          packageId,
-          vendorIds: rfqSelectedVendors,
-          subject: rfqPreview.subject,
-          htmlBody: rfqPreview.htmlBody,
+          ...request,
         },
       });
-      if ((res as any).success) {
-        toast.success(`RFQ sent to ${(res as any).sentCount} vendor(s)!`);
+      if (res.success) {
+        toast.success(`RFQ sent to ${res.sentCount} vendor(s)!`);
         onClose();
       } else {
         toast.error('Failed to send RFQ to some vendors.');
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to send RFQ.');
+    } catch (error: unknown) {
+      toast.error(errorMessage(error, 'Failed to send RFQ.'));
     } finally {
       setIsRfqSending(false);
     }
