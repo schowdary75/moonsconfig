@@ -131,7 +131,7 @@ function GeocodeInput({
         </span>
       </div>
       {open && results.length > 0 && (
-        <ul className="absolute z-30 mt-1 max-h-56 w-72 overflow-auto rounded-md border border-border bg-popover p-1 shadow-lg">
+        <ul className="absolute z-30 mt-1 max-h-56 w-[min(18rem,calc(100vw-3rem))] overflow-auto rounded-md border border-border bg-popover p-1 shadow-lg">
           {results.map((r, i) => (
             <li key={i}>
               <button
@@ -191,8 +191,8 @@ function EndpointModeSelector({
   onChange: (mode: EndpointMode) => void;
 }) {
   return (
-    <div className="flex items-center gap-2 py-1.5 pl-[38px]">
-      <span className="w-14 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-2 py-2 sm:py-1.5 sm:pl-[38px]">
+      <span className="w-full text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:w-14">
         {label}
       </span>
       <ToggleGroup
@@ -203,7 +203,7 @@ function EndpointModeSelector({
             onChange(value as EndpointMode);
           }
         }}
-        className="gap-1"
+        className="flex-wrap gap-1"
       >
         {(Object.keys(ROUTE_STYLES) as TransportMode[]).map((transportMode) => {
           const Icon = MODE_ICON[transportMode];
@@ -214,7 +214,7 @@ function EndpointModeSelector({
               value={transportMode}
               aria-label={`${label} by ${transportMode}`}
               title={`${label}: ${ROUTE_STYLES[transportMode].label}`}
-              className="h-7 w-8 rounded-md border border-border p-0 data-[state=on]:border-transparent"
+              className="h-10 w-10 rounded-md border border-border p-0 data-[state=on]:border-transparent sm:h-7 sm:w-8"
               style={
                 active
                   ? { backgroundColor: ROUTE_STYLES[transportMode].stroke, color: '#fff' }
@@ -233,7 +233,7 @@ function EndpointModeSelector({
           value="none"
           aria-label={`No ${label.toLowerCase()} transport`}
           title={`${label}: none (hide this leg)`}
-          className="h-7 w-8 rounded-md border border-border p-0 text-muted-foreground data-[state=on]:border-transparent data-[state=on]:bg-muted-foreground data-[state=on]:text-white"
+          className="h-10 w-10 rounded-md border border-border p-0 text-muted-foreground data-[state=on]:border-transparent data-[state=on]:bg-muted-foreground data-[state=on]:text-white sm:h-7 sm:w-8"
         >
           <Ban className="h-3.5 w-3.5" />
         </ToggleGroupItem>
@@ -311,7 +311,7 @@ export function RouteStopEditor({
           <RouteIcon className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold">Itinerary</span>
         </div>
-        <Button size="sm" className="h-7 gap-1 px-2.5 text-xs" onClick={addStop}>
+        <Button size="sm" className="min-h-10 gap-1 px-2.5 text-xs sm:min-h-7" onClick={addStop}>
           <Plus className="h-3.5 w-3.5" /> Add stop
         </Button>
       </div>
@@ -376,7 +376,7 @@ export function RouteStopEditor({
                     </span>
                   </div>
 
-                  <div className="flex-1 rounded-xl border border-border bg-card p-2.5 shadow-sm transition-colors hover:border-primary/40">
+                  <div className="min-w-0 flex-1 rounded-xl border border-border bg-card p-2.5 shadow-sm transition-colors hover:border-primary/40">
                     <div className="flex items-center gap-1.5">
                       <GeocodeInput
                         value={stop.name}
@@ -388,7 +388,7 @@ export function RouteStopEditor({
                       <div className="flex shrink-0 flex-col">
                         <button
                           type="button"
-                          className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                          className="flex min-h-9 min-w-9 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 sm:min-h-4 sm:min-w-4"
                           onClick={() => moveStop(index, -1)}
                           disabled={index === 0}
                           aria-label={`Move ${accessibleStopName} up`}
@@ -397,7 +397,7 @@ export function RouteStopEditor({
                         </button>
                         <button
                           type="button"
-                          className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                          className="flex min-h-9 min-w-9 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 sm:min-h-4 sm:min-w-4"
                           onClick={() => moveStop(index, 1)}
                           disabled={index === stops.length - 1}
                           aria-label={`Move ${accessibleStopName} down`}
@@ -407,7 +407,7 @@ export function RouteStopEditor({
                       </div>
                       <button
                         type="button"
-                        className="shrink-0 text-muted-foreground hover:text-destructive"
+                        className="flex min-h-10 min-w-10 shrink-0 items-center justify-center text-muted-foreground hover:text-destructive sm:min-h-7 sm:min-w-7"
                         onClick={() => removeStop(stop.id)}
                         aria-label={`Remove ${accessibleStopName}`}
                       >
@@ -415,7 +415,7 @@ export function RouteStopEditor({
                       </button>
                     </div>
 
-                    <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                    <div className="mt-1.5 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                       <div>
                         <Input
                           type="number"
@@ -426,7 +426,7 @@ export function RouteStopEditor({
                           aria-describedby={!latOk ? latitudeErrorId : undefined}
                           onChange={(e) => updateStop(stop.id, { lat: parseFloat(e.target.value) })}
                           placeholder="Latitude"
-                          className={`h-7 text-xs ${latOk ? '' : 'border-destructive focus-visible:ring-destructive'}`}
+                          className={`h-10 text-xs sm:h-7 ${latOk ? '' : 'border-destructive focus-visible:ring-destructive'}`}
                         />
                         {!latOk && (
                           <p
@@ -448,7 +448,7 @@ export function RouteStopEditor({
                           aria-describedby={!lngOk ? longitudeErrorId : undefined}
                           onChange={(e) => updateStop(stop.id, { lng: parseFloat(e.target.value) })}
                           placeholder="Longitude"
-                          className={`h-7 text-xs ${lngOk ? '' : 'border-destructive focus-visible:ring-destructive'}`}
+                          className={`h-10 text-xs sm:h-7 ${lngOk ? '' : 'border-destructive focus-visible:ring-destructive'}`}
                         />
                         {!lngOk && (
                           <p
@@ -462,7 +462,7 @@ export function RouteStopEditor({
                       </div>
                     </div>
 
-                    <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                    <div className="mt-1.5 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                       <Select
                         value={stop.labelPosition ?? 'auto'}
                         onValueChange={(v) =>
@@ -471,7 +471,7 @@ export function RouteStopEditor({
                       >
                         <SelectTrigger
                           aria-label={`Label position for ${accessibleStopName}`}
-                          className="h-7 text-xs"
+                          className="h-10 text-xs sm:h-7"
                         >
                           <SelectValue />
                         </SelectTrigger>
@@ -490,7 +490,7 @@ export function RouteStopEditor({
                         aria-label={`Custom label for ${accessibleStopName}`}
                         onChange={(e) => updateStop(stop.id, { label: e.target.value })}
                         placeholder="Custom label"
-                        className="h-7 text-xs"
+                        className="h-10 text-xs sm:h-7"
                       />
                     </div>
                   </div>
@@ -498,12 +498,12 @@ export function RouteStopEditor({
 
                 {/* Route mode between this stop and the next */}
                 {segment && (
-                  <div className="flex items-center gap-2 py-1.5 pl-[38px]">
+                  <div className="flex flex-wrap items-center gap-2 py-2 sm:py-1.5 sm:pl-[38px]">
                     <ToggleGroup
                       type="single"
                       value={segment.mode}
                       onValueChange={(v) => v && setSegmentMode(segment.id, v as TransportMode)}
-                      className="gap-1"
+                      className="flex-wrap gap-1"
                     >
                       {(Object.keys(ROUTE_STYLES) as TransportMode[]).map((mode) => {
                         const Icon = MODE_ICON[mode];
@@ -514,7 +514,7 @@ export function RouteStopEditor({
                             value={mode}
                             aria-label={`${ROUTE_STYLES[mode].label.toLowerCase()} route from ${stop.name || `stop ${index + 1}`} to ${next?.name || `stop ${index + 2}`}`}
                             title={ROUTE_STYLES[mode].label}
-                            className="h-7 w-8 rounded-md border border-border p-0 data-[state=on]:border-transparent"
+                            className="h-10 w-10 rounded-md border border-border p-0 data-[state=on]:border-transparent sm:h-7 sm:w-8"
                             style={
                               active
                                 ? { backgroundColor: ROUTE_STYLES[mode].stroke, color: '#fff' }
@@ -530,7 +530,7 @@ export function RouteStopEditor({
                       })}
                     </ToggleGroup>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex w-full items-center gap-2 sm:w-auto sm:gap-1">
                       <span className="text-[10px] text-muted-foreground">curve</span>
                       <input
                         type="range"
@@ -541,12 +541,12 @@ export function RouteStopEditor({
                         aria-label={`Curve for route from ${stop.name || `stop ${index + 1}`} to ${next?.name || `stop ${index + 2}`}`}
                         aria-valuetext={curveValueText(segment.curve ?? 0.25)}
                         onChange={(e) => setSegmentCurve(segment.id, parseFloat(e.target.value))}
-                        className="h-1 w-14 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="h-4 min-w-0 flex-1 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-1 sm:w-14 sm:flex-none"
                       />
                     </div>
 
                     {legKm > 0 && (
-                      <span className="ml-auto text-[10px] font-medium text-muted-foreground">
+                      <span className="text-[10px] font-medium text-muted-foreground sm:ml-auto">
                         {legKm >= 1000 ? `${(legKm / 1000).toFixed(1)}k` : Math.round(legKm)} km
                       </span>
                     )}
@@ -570,7 +570,7 @@ export function RouteStopEditor({
           <Button
             size="sm"
             variant="outline"
-            className="h-7 gap-1 px-3 text-xs shadow-sm"
+            className="min-h-10 gap-1 px-3 text-xs shadow-sm sm:min-h-7"
             onClick={addStop}
           >
             <Plus className="h-3.5 w-3.5" /> Add stop

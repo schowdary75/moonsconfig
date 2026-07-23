@@ -26,6 +26,7 @@ import {
 } from './routeMapUtils';
 import { RouteLegend } from './RouteLegend';
 import { MIN_TRANSPORT_ICON_PATH_LENGTH, TransportRouteIcon } from './TransportRouteIcon';
+import { getRouteMapTouchAction } from './routeMapInteraction';
 
 interface RouteMapCanvasProps {
   config: MapConfig;
@@ -742,7 +743,7 @@ export function RouteMapCanvas({
           aria-label="Zoom in"
           title="Zoom in"
           onClick={() => applyZoom(0.5, 0.5, 1.5)}
-          className="flex h-7 w-7 items-center justify-center text-neutral-700 transition-colors hover:bg-neutral-100"
+          className="flex h-10 w-10 items-center justify-center text-neutral-700 transition-colors hover:bg-neutral-100 sm:h-8 sm:w-8"
         >
           <Plus className="h-4 w-4" />
         </button>
@@ -752,7 +753,7 @@ export function RouteMapCanvas({
           title="Zoom out"
           onClick={() => applyZoom(0.5, 0.5, 1 / 1.5)}
           disabled={!isZoomed}
-          className="flex h-7 w-7 items-center justify-center border-t border-black/10 text-neutral-700 transition-colors hover:bg-neutral-100 disabled:opacity-40"
+          className="flex h-10 w-10 items-center justify-center border-t border-black/10 text-neutral-700 transition-colors hover:bg-neutral-100 disabled:opacity-40 sm:h-8 sm:w-8"
         >
           <Minus className="h-4 w-4" />
         </button>
@@ -762,7 +763,7 @@ export function RouteMapCanvas({
           title="Reset zoom (or double-click the map)"
           onClick={resetManualZoom}
           disabled={!isZoomed}
-          className="flex h-7 w-7 items-center justify-center border-t border-black/10 text-neutral-700 transition-colors hover:bg-neutral-100 disabled:opacity-40"
+          className="flex h-10 w-10 items-center justify-center border-t border-black/10 text-neutral-700 transition-colors hover:bg-neutral-100 disabled:opacity-40 sm:h-8 sm:w-8"
         >
           <Maximize className="h-4 w-4" />
         </button>
@@ -786,7 +787,11 @@ export function RouteMapCanvas({
           width: '100%',
           height: '100%',
           cursor: calibrationMode ? 'crosshair' : isPanning ? 'grabbing' : 'grab',
-          touchAction: 'none',
+          touchAction: getRouteMapTouchAction({
+            editPath,
+            isPanning,
+            draggingWaypoint: draggingWp !== null,
+          }),
         }}
       >
         {/* While dragging, the whole map shifts via a cheap group transform;
