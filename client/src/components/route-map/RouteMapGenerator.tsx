@@ -186,7 +186,7 @@ function MapPicker({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
+      <PopoverContent className="w-[min(300px,calc(100vw-2rem))] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search any country…" />
           <CommandList>
@@ -786,11 +786,11 @@ export function RouteMapGenerator() {
   const currentLabel = config.custom ? `${config.countryName} (custom)` : config.countryName;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 max-w-full flex-col gap-4 overflow-x-clip">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-normal">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3 xl:items-center">
+        <div className="min-w-0 flex-1">
+          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-normal sm:text-2xl">
             <MapPin className="h-5 w-5 text-primary" /> MapChart Route Map
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -798,14 +798,14 @@ export function RouteMapGenerator() {
             transport, export as PNG/SVG.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-0.5 shadow-sm mr-2">
+        <div className="grid w-full min-w-0 grid-cols-2 items-center gap-2 sm:flex sm:w-auto sm:flex-wrap">
+          <div className="col-span-2 flex w-full items-center gap-1 rounded-lg border border-border bg-card p-0.5 shadow-sm sm:mr-2 sm:w-auto">
             <button
               type="button"
               onClick={() => setAutoZoom(true)}
               disabled={!!config.backgroundImage}
               className={cn(
-                'flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-40',
+                'flex min-h-10 flex-1 items-center justify-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-40 sm:min-h-0 sm:flex-none',
                 autoZoom
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground',
@@ -817,7 +817,7 @@ export function RouteMapGenerator() {
               type="button"
               onClick={() => setAutoZoom(false)}
               className={cn(
-                'flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                'flex min-h-10 flex-1 items-center justify-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors sm:min-h-0 sm:flex-none',
                 !autoZoom
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground',
@@ -830,6 +830,7 @@ export function RouteMapGenerator() {
           <Button
             variant={editPath ? 'default' : 'outline'}
             size="sm"
+            className="min-h-10 w-full justify-center sm:min-h-0 sm:w-auto"
             onClick={() => setEditPath((v) => !v)}
             title="Drag handles on the map to shape each leg; click + to add a waypoint, double-click a handle to remove it"
           >
@@ -847,36 +848,54 @@ export function RouteMapGenerator() {
           <Button
             variant="outline"
             size="sm"
+            className="min-h-10 w-full justify-center sm:min-h-0 sm:w-auto"
             title="Import a version 1 route JSON file (maximum 1 MB)"
             onClick={() => routeJsonInputRef.current?.click()}
           >
             <Upload className="mr-2 h-4 w-4" /> Import JSON
           </Button>
-          <Button variant="outline" size="sm" onClick={exportRouteJson}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="min-h-10 w-full justify-center sm:min-h-0 sm:w-auto"
+            onClick={exportRouteJson}
+          >
             <Download className="mr-2 h-4 w-4" /> Export JSON
           </Button>
 
           <Button
             variant="outline"
             size="sm"
+            className="min-h-10 w-full justify-center sm:min-h-0 sm:w-auto"
             onClick={saveRoute}
             disabled={saving || stops.length === 0}
           >
             <Save className="mr-2 h-4 w-4" /> {saving ? 'Saving…' : 'Save Route'}
           </Button>
 
-          <Button variant="outline" size="sm" onClick={exportSvg} disabled={exporting}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="min-h-10 w-full justify-center sm:min-h-0 sm:w-auto"
+            onClick={exportSvg}
+            disabled={exporting}
+          >
             <ImageDown className="mr-2 h-4 w-4" /> SVG
           </Button>
-          <Button size="sm" onClick={exportPng} disabled={exporting}>
+          <Button
+            size="sm"
+            className="min-h-10 w-full justify-center sm:min-h-0 sm:w-auto"
+            onClick={exportPng}
+            disabled={exporting}
+          >
             <Download className="mr-2 h-4 w-4" /> {exporting ? 'Exporting…' : 'Export PNG'}
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[340px_1fr]">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
         {/* ── Left sidebar ── */}
-        <div className="space-y-4 rounded-xl border border-border bg-card/60 p-4">
+        <div className="min-w-0 max-w-full space-y-4 rounded-xl border border-border bg-card/60 p-3 sm:p-4">
           <div className="space-y-2">
             <SectionLabel>Country / Map</SectionLabel>
             <MapPicker
@@ -900,9 +919,12 @@ export function RouteMapGenerator() {
                 className="h-8 text-xs"
               />
             </div>
-            <div className="flex gap-1.5">
+            <div className="flex min-w-0 gap-1.5">
               <Select value={selectedSavedId} onValueChange={loadSavedRoute}>
-                <SelectTrigger className="h-8 flex-1 text-xs" disabled={loadingSaved}>
+                <SelectTrigger
+                  className="h-10 min-w-0 flex-1 text-xs sm:h-8"
+                  disabled={loadingSaved}
+                >
                   <SelectValue
                     placeholder={
                       loadingSaved
@@ -925,7 +947,7 @@ export function RouteMapGenerator() {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                className="h-10 min-w-10 px-2 text-muted-foreground hover:text-destructive sm:h-8 sm:min-w-0"
                 onClick={deleteSavedRoute}
                 disabled={!selectedSavedId}
                 title="Delete selected saved route"
@@ -949,7 +971,7 @@ export function RouteMapGenerator() {
             <Button
               variant="outline"
               size="sm"
-              className="mt-2 h-7 w-full gap-1 text-xs text-muted-foreground hover:text-destructive"
+              className="mt-2 min-h-10 w-full gap-1 text-xs text-muted-foreground hover:text-destructive sm:min-h-7"
               onClick={clearRoute}
               disabled={stops.length === 0}
             >
@@ -997,7 +1019,7 @@ export function RouteMapGenerator() {
         </div>
 
         {/* ── Center: map preview (sticks while the sidebar scrolls) ── */}
-        <div className="flex flex-col self-start rounded-xl border border-border bg-[radial-gradient(circle_at_1px_1px,rgba(0,0,0,0.05)_1px,transparent_0)] [background-size:16px_16px] p-4 lg:sticky lg:top-0">
+        <div className="flex min-w-0 max-w-full flex-col self-start rounded-xl border border-border bg-[radial-gradient(circle_at_1px_1px,rgba(0,0,0,0.05)_1px,transparent_0)] [background-size:16px_16px] p-2 sm:p-4 lg:sticky lg:top-0">
           {/* Map toolbar */}
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -1045,8 +1067,8 @@ export function RouteMapGenerator() {
               </ul>
             </div>
           )}
-          <div className="flex flex-col items-start gap-4 xl:flex-row">
-            <div className="min-w-0 w-full flex-1">
+          <div className="flex min-w-0 flex-col items-start gap-4 xl:flex-row">
+            <div className="w-full min-w-0 flex-1">
               <RouteMapCanvas
                 config={viewConfig}
                 ctx={ctx}

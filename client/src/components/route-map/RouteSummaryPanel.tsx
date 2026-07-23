@@ -88,7 +88,7 @@ export function RouteSummaryPanel({
           disabled={downloading || stops.length === 0}
           title="Download as PNG"
           aria-label="Download route itinerary as PNG"
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+          className="absolute right-2 top-1/2 flex min-h-10 min-w-10 -translate-y-1/2 items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 sm:min-h-0 sm:min-w-0"
         >
           <Download className="h-3.5 w-3.5" />
         </button>
