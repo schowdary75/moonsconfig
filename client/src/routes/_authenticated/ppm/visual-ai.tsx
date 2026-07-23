@@ -1,10 +1,12 @@
 // @ts-nocheck -- behavior-parity screen pending incremental type hardening.
 import { createFileRoute } from '@/lib/routerCompat';
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from '@/lib/toast';
-import { Camera, Image as ImageIcon, Sparkles, Loader2, MapPin, Wind } from 'lucide-react';
+import { Sparkles, Loader2, MapPin, Wind } from 'lucide-react';
 import { useAuth } from '@/components/auth-context';
 import { Button } from '@/components/ui/button';
+import { VisualImageDropzone } from '@/components/visual-ai/VisualImageDropzone';
+import { readVisualImage, validateVisualImage } from '@/components/visual-ai/visualImageUpload';
 import { adminAiVisualScrapbook, adminSaveAiItineraryToActivities } from '@/lib/api/db.functions';
 
 export const Route = createFileRoute('/_authenticated/ppm/visual-ai')({
@@ -14,10 +16,12 @@ export const Route = createFileRoute('/_authenticated/ppm/visual-ai')({
 function ScrapbooksPage() {
   const { user } = useAuth();
   const auth = user?.session_token ? { email: user.email, sessionToken: user.session_token } : null;
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadInFlightRef = useRef(false);
 
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -39,22 +43,33 @@ function ScrapbooksPage() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !auth) return;
+  const handleImageUpload = async (file: File) => {
+    if (uploadInFlightRef.current) return;
 
-    if (!file.type.includes('image')) {
-      toast.error('Please upload an image file (JPG, PNG).');
+    const validation = validateVisualImage(file);
+    if (!validation.valid) {
+      setUploadError(validation.message);
+      toast.error(validation.message);
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64Str = reader.result as string;
-      setImageSrc(base64Str);
-      setResult(null);
+    if (!auth) {
+      const message = 'Your session has expired. Sign in again before analyzing an image.';
+      setUploadError(message);
+      toast.error(message);
+      return;
+    }
 
-      setIsGenerating(true);
+    uploadInFlightRef.current = true;
+    setIsGenerating(true);
+    setIsDragActive(false);
+    setUploadError(null);
+    setResult(null);
+
+    try {
+      const base64Str = await readVisualImage(file);
+      setImageSrc(base64Str);
+
       try {
         const base64Data = base64Str.split(',')[1];
         const res = await adminAiVisualScrapbook({
@@ -63,14 +78,21 @@ function ScrapbooksPage() {
         setResult(res);
         toast.success('AI analyzed the image and built an itinerary!');
       } catch (err) {
-        toast.error(
-          'AI Analysis failed: ' + (err instanceof Error ? err.message : 'Unknown error'),
-        );
-      } finally {
-        setIsGenerating(false);
+        const message =
+          'The AI provider could not analyze this image. ' +
+          (err instanceof Error ? err.message : 'Please try again.');
+        setUploadError(message);
+        toast.error(message);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'The image could not be read. Choose another file.';
+      setUploadError(message);
+      toast.error(message);
+    } finally {
+      uploadInFlightRef.current = false;
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -79,54 +101,14 @@ function ScrapbooksPage() {
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Left: Upload Area */}
-        <div className="glass-card rounded-xl p-6 flex flex-col items-center justify-center min-h-[400px] border-dashed border-2 border-primary/20 bg-primary/5 relative overflow-hidden group">
-          {imageSrc ? (
-            <>
-              <img
-                src={imageSrc}
-                alt="Inspiration"
-                className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay"
-              />
-              <div className="relative z-10 flex flex-col items-center p-6 bg-background/80 backdrop-blur-md rounded-xl shadow-lg border border-border/50">
-                <img
-                  src={imageSrc}
-                  alt="Thumbnail"
-                  className="w-48 h-48 object-cover rounded-lg shadow-sm mb-4"
-                />
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isGenerating}
-                >
-                  Upload Different Photo
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                <ImageIcon className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Drop Inspiration Here</h3>
-              <p className="text-sm text-muted-foreground mb-6 max-w-xs">
-                Upload a screenshot from Instagram or a dreamy Pinterest board.
-              </p>
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                className="shadow-lg hover:shadow-primary/25"
-              >
-                Select Image
-              </Button>
-            </div>
-          )}
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept="image/*"
-            onChange={handleImageUpload}
-          />
-        </div>
+        <VisualImageDropzone
+          imageSrc={imageSrc}
+          busy={isGenerating}
+          dragActive={isDragActive}
+          error={uploadError}
+          onDragActiveChange={setIsDragActive}
+          onFile={(file) => void handleImageUpload(file)}
+        />
 
         {/* Right: Results Area */}
         <div className="glass-card rounded-xl overflow-hidden flex flex-col">
