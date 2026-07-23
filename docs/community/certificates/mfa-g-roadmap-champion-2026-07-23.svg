@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title description">
+  <title id="title">MooNsConfig Roadmap Champion certificate for MFA-G</title>
+  <description id="description">Certificate MOONSCONFIG-RC-2026-0001, issued 23 July 2026 for pull request 22 and completion of Community Upgrade Roadmap issue 21.</description>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#08111f" />
+      <stop offset="0.55" stop-color="#10233d" />
+      <stop offset="1" stop-color="#07101c" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#b98b2f" />
+      <stop offset="0.5" stop-color="#f3d67a" />
+      <stop offset="1" stop-color="#b98b2f" />
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" />
+    </filter>
+  </defs>
+
+  <rect width="1200" height="675" fill="url(#background)" />
+  <circle cx="1030" cy="105" r="155" fill="#d4af37" opacity="0.08" />
+  <circle cx="1030" cy="105" r="105" fill="#d4af37" opacity="0.07" />
+  <circle cx="170" cy="590" r="185" fill="#4f83cc" opacity="0.07" />
+  <rect x="28" y="28" width="1144" height="619" rx="18" fill="none" stroke="url(#gold)" stroke-width="2" />
+  <rect x="44" y="44" width="1112" height="587" rx="14" fill="none" stroke="#d4af37" stroke-opacity="0.25" />
+
+  <g transform="translate(88 72)">
+    <circle cx="34" cy="34" r="34" fill="#d4af37" opacity="0.18" />
+    <path d="M18 20h32v28H18zM26 12h16v44H26z" fill="#f3d67a" />
+    <text x="86" y="28" fill="#f8fafc" font-family="Inter, Segoe UI, sans-serif" font-size="28" font-weight="700">MooNsConfig</text>
+    <text x="86" y="52" fill="#9fb2ca" font-family="Inter, Segoe UI, sans-serif" font-size="14" letter-spacing="2">OPEN TRAVEL OPERATING SYSTEM</text>
+  </g>
+
+  <text x="600" y="205" text-anchor="middle" fill="#d4af37" font-family="Inter, Segoe UI, sans-serif" font-size="18" font-weight="700" letter-spacing="5">CERTIFICATE OF RECOGNITION</text>
+  <text x="600" y="267" text-anchor="middle" fill="#ffffff" font-family="Georgia, Times New Roman, serif" font-size="52">Roadmap Champion</text>
+  <rect x="355" y="290" width="490" height="2" fill="url(#gold)" />
+
+  <text x="600" y="340" text-anchor="middle" fill="#aebdd0" font-family="Inter, Segoe UI, sans-serif" font-size="17">Presented to</text>
+  <text x="600" y="397" text-anchor="middle" fill="#f3d67a" font-family="Inter, Segoe UI, sans-serif" font-size="46" font-weight="700">MFA-G</text>
+  <text x="600" y="442" text-anchor="middle" fill="#dce5f0" font-family="Inter, Segoe UI, sans-serif" font-size="18">for isolating the integration adapter registry and completing</text>
+  <text x="600" y="470" text-anchor="middle" fill="#dce5f0" font-family="Inter, Segoe UI, sans-serif" font-size="18">Community Upgrade Roadmap issue #21 through pull request #22.</text>
+
+  <g transform="translate(110 535)">
+    <text x="0" y="0" fill="#8296ad" font-family="Inter, Segoe UI, sans-serif" font-size="13" letter-spacing="1">ISSUED</text>
+    <text x="0" y="27" fill="#f8fafc" font-family="Inter, Segoe UI, sans-serif" font-size="17">23 July 2026</text>
+  </g>
+  <g transform="translate(440 535)">
+    <text x="0" y="0" fill="#8296ad" font-family="Inter, Segoe UI, sans-serif" font-size="13" letter-spacing="1">CERTIFICATE ID</text>
+    <text x="0" y="27" fill="#f8fafc" font-family="Inter, Segoe UI, sans-serif" font-size="17">MOONSCONFIG-RC-2026-0001</text>
+  </g>
+  <g transform="translate(905 535)">
+    <text x="0" y="0" fill="#8296ad" font-family="Inter, Segoe UI, sans-serif" font-size="13" letter-spacing="1">MAINTAINER</text>
+    <text x="0" y="27" fill="#f8fafc" font-family="Inter, Segoe UI, sans-serif" font-size="17">MooN</text>
+  </g>
+
+  <text x="600" y="615" text-anchor="middle" fill="#718399" font-family="Inter, Segoe UI, sans-serif" font-size="12">Verify on github.com/schowdary75/moonsconfig · PR #22 · MOONSCONFIG-RC-2026-0001</text>
+</svg>

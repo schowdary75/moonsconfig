@@ -10,6 +10,9 @@
 [![GitHub Stars](https://img.shields.io/github/stars/schowdary75/moonsconfig?style=flat-square&logo=github&cacheSeconds=1800)](https://github.com/schowdary75/moonsconfig)
 [![GitHub Forks](https://img.shields.io/github/forks/schowdary75/moonsconfig?style=flat-square&logo=github)](https://github.com/schowdary75/moonsconfig/forks)
 [![GitHub Contributors](https://img.shields.io/github/contributors/schowdary75/moonsconfig?style=flat-square&logo=github)](https://github.com/schowdary75/moonsconfig/graphs/contributors)
+[![Hall of Fame](https://img.shields.io/badge/community-Hall_of_Fame-D4AF37?style=flat-square&logo=githubsponsors&logoColor=white)](docs/community/HALL_OF_FAME.md)
+[![Roadmap Champions](https://img.shields.io/badge/recognition-Roadmap_Champions-6F42C1?style=flat-square&logo=gitbook&logoColor=white)](docs/community/RECOGNITION.md#roadmap-champions)
+[![Contributor Certificates](https://img.shields.io/badge/contributors-digital_certificates-0E8A16?style=flat-square&logo=credly&logoColor=white)](docs/community/CERTIFICATES.md)
 
 An open, AI-assisted travel operating system for running the complete traveller journey—from the
 first call or chat through itinerary curation, supplier pricing, proposals, booking, on-trip
@@ -571,6 +574,20 @@ accessibility, documentation, and provider integrations that fail safely when un
 
 Use GitHub Issues for reproducible bugs and focused feature proposals. Do not report security
 vulnerabilities in a public issue; follow [SECURITY.md](SECURITY.md).
+
+### Contributor recognition
+
+Every accepted contribution can earn a travel-themed contributor badge. Merged pull requests,
+accepted issue reports, roadmap completions, and commits are reflected in the
+[community leaderboard](docs/community/LEADERBOARD.md). Milestone closers receive special
+**Roadmap Champion** recognition.
+
+- Meet the people behind the project in the [Hall of Fame](docs/community/HALL_OF_FAME.md).
+- See badge tiers and scoring in the [recognition program](docs/community/RECOGNITION.md).
+- Learn how repository-verifiable [digital certificates](docs/community/CERTIFICATES.md) are
+  issued.
+- Nominate a contributor through the
+  [recognition nomination form](https://github.com/schowdary75/moonsconfig/issues/new?template=recognition_nomination.yml).
 
 ## License
 
