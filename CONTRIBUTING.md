@@ -14,7 +14,7 @@ experience.
 
 ## Local setup
 
-Follow the [README quick start](README.md#quick-start-with-docker) or
+Follow the [one-command Docker setup](README.md#one-command-start-for-non-developers) or
 [native development guide](README.md#run-natively-for-development).
 
 For native development:
@@ -31,14 +31,42 @@ npm run dev:app
 
 `npm run setup:env` refuses to overwrite an existing `.env`.
 
-## Branches and commits
+## Fork, branch, and commit workflow
 
-Create a short branch from the latest `main`:
+External contributors do not need write access to `schowdary75/moonsconfig`.
+
+1. On GitHub, open the
+   [MooNsConfig repository](https://github.com/schowdary75/moonsconfig) and select **Fork**.
+2. Clone your fork and enter the project:
+
+   ```bash
+   git clone https://github.com/YOUR-USERNAME/moonsconfig.git
+   cd moonsconfig
+   ```
+
+3. Keep your fork as `origin` and add the public repository as `upstream`:
+
+   ```bash
+   git remote add upstream https://github.com/schowdary75/moonsconfig.git
+   git remote -v
+   ```
+
+Before each contribution, synchronize `main` and create a focused branch:
 
 ```bash
 git switch main
-git pull --ff-only
+git fetch upstream
+git merge --ff-only upstream/main
+git push origin main
 git switch -c feat/short-description
+```
+
+Commit and push the branch to your fork:
+
+```bash
+git add path/to/changed-file
+git commit -m "feat(area): describe the change"
+git push -u origin feat/short-description
 ```
 
 Use clear commit messages such as:
@@ -49,6 +77,24 @@ fix(vendors): preserve filters after an RFQ
 docs(setup): clarify local MySQL grants
 test(auth): cover refresh-token reuse
 ```
+
+On GitHub, open a pull request with:
+
+- base repository and branch: `schowdary75/moonsconfig:main`
+- head repository and branch: `YOUR-USERNAME/moonsconfig:feat/short-description`
+
+If review feedback requires changes, update the same local branch and push it again:
+
+```bash
+git switch feat/short-description
+# Make and validate the requested changes.
+git add path/to/changed-file
+git commit -m "fix(area): address review feedback"
+git push
+```
+
+The existing pull request updates automatically. Do not open a replacement pull request for each
+review round.
 
 ## Code expectations
 
