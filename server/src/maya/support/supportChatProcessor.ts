@@ -4,7 +4,7 @@ import { logger } from '../../logger/index.js';
 import { ensureTravellerForCustomer } from '../../services/travelDomainService.js';
 import { MayaBrain } from '../brain.js';
 import { createMayaDeps } from '../deps.js';
-import { triageMessage } from '../ontrip/triage.js';
+import { triageMessage, type Triage } from '../ontrip/triage.js';
 import type { MayaTurn } from '../types.js';
 import { openSosRecovery } from '../../services/siteCompatibilityService.js';
 
@@ -13,7 +13,11 @@ let processing = false;
 export function redactSensitiveTravelData(text: string) {
   return text
     .replace(
-      /\b(passport|visa|aadhaar|aadhar)\s*(?:number|no\.?|#)?\s*[:=-]?\s*[a-z0-9-]{5,20}\b/gi,
+      /\b(passport|visa|aadhaar|aadhar)\s*(?:number|no\.?|#)\s*(?:is\s*)?[:=-]?\s*[a-z0-9-]{5,20}\b/gi,
+      '$1 number [REDACTED]',
+    )
+    .replace(
+      /\b(passport|visa|aadhaar|aadhar)\s+(?!number\b|no\b|is\b)[a-z0-9-]{5,20}\b/gi,
       '$1 number [REDACTED]',
     )
     .replace(/\b\d{4}[ -]?\d{4}[ -]?\d{4}\b/g, '[REDACTED ID]');
@@ -67,21 +71,129 @@ async function canonicalConversation(chat: {
   });
 }
 
-export async function processGovernedSupportChat(chatId: number) {
-  const lock = await prisma.support_chats.updateMany({
-    where: {
-      id: chatId,
-      status: 'open',
-      ai_is_typing: { not: true },
-      OR: [{ agent_id: null }, { agent_id: 0 }],
-    },
-    data: { ai_is_typing: true },
-  });
-  if (!lock.count) return false;
+export interface SupportChatProcessorContext {
+  chat: {
+    id: number;
+    customer_id: number;
+    guest_name: string | null;
+    guest_phone: string | null;
+  };
+  messages: Array<{ id: number; sender_id: number; content: string }>;
+  customer: { id: number; name: string | null; phone: string | null } | null;
+  conversation: { id: string; mayaMode: string };
+}
 
-  try {
+export interface GovernedSupportChatRepository {
+  acquire(chatId: number): Promise<boolean>;
+  release(chatId: number): Promise<void>;
+  load(chatId: number): Promise<SupportChatProcessorContext | null>;
+  reserveInbound(
+    context: SupportChatProcessorContext,
+    messageId: number,
+    body: string,
+  ): Promise<boolean>;
+  escalate(
+    context: SupportChatProcessorContext,
+    triage: Triage,
+    safeInput: string,
+  ): Promise<string>;
+  saveReply(context: SupportChatProcessorContext, reply: string): Promise<void>;
+  recordProviderFailure(context: SupportChatProcessorContext): Promise<void>;
+}
+
+export interface SupportChatReplyProvider {
+  respond(input: {
+    safeInput: string;
+    history: MayaTurn[];
+    context: {
+      conversationId: string;
+      callerName: string | null;
+      callerPhone: string | null;
+    };
+  }): Promise<string>;
+}
+
+export function createGovernedSupportChatProcessor({
+  repository,
+  replyProvider,
+}: {
+  repository: GovernedSupportChatRepository;
+  replyProvider: SupportChatReplyProvider;
+}) {
+  return async (chatId: number): Promise<boolean> => {
+    if (!(await repository.acquire(chatId))) return false;
+    try {
+      const context = await repository.load(chatId);
+      if (!context || context.conversation.mayaMode === 'human_only') return false;
+      const last = context.messages.at(-1);
+      if (!last || last.sender_id !== context.chat.customer_id) return false;
+
+      const safeInput = redactSensitiveTravelData(last.content);
+      if (!(await repository.reserveInbound(context, last.id, safeInput))) return false;
+
+      const triage = triageMessage(safeInput);
+      let reply: string;
+      if (!triage.autoReplyable) {
+        reply = await repository.escalate(context, triage, safeInput);
+      } else {
+        const history: MayaTurn[] = [];
+        for (const message of context.messages.slice(0, -1)) {
+          const role = message.sender_id === context.chat.customer_id ? 'user' : 'model';
+          const text = redactSensitiveTravelData(message.content);
+          const previous = history.at(-1);
+          if (previous?.role === role) previous.parts[0]!.text += `\n${text}`;
+          else history.push({ role, parts: [{ text }] });
+        }
+        while (history[0]?.role === 'model') history.shift();
+        try {
+          reply = await replyProvider.respond({
+            safeInput,
+            history,
+            context: {
+              conversationId: context.conversation.id,
+              callerName: context.customer?.name ?? context.chat.guest_name,
+              callerPhone: context.customer?.phone ?? context.chat.guest_phone,
+            },
+          });
+        } catch {
+          await repository.recordProviderFailure(context);
+          return false;
+        }
+        if (!reply.trim()) {
+          await repository.recordProviderFailure(context);
+          return false;
+        }
+      }
+
+      await repository.saveReply(context, reply);
+      return true;
+    } finally {
+      await repository.release(chatId);
+    }
+  };
+}
+
+const supportChatRepository: GovernedSupportChatRepository = {
+  async acquire(chatId) {
+    const lock = await prisma.support_chats.updateMany({
+      where: {
+        id: chatId,
+        status: 'open',
+        ai_is_typing: { not: true },
+        OR: [{ agent_id: null }, { agent_id: 0 }],
+      },
+      data: { ai_is_typing: true },
+    });
+    return lock.count > 0;
+  },
+  async release(chatId) {
+    await prisma.support_chats
+      .update({ where: { id: chatId }, data: { ai_is_typing: false } })
+      .catch(() => undefined);
+  },
+  async load(chatId) {
     const chat = await prisma.support_chats.findUnique({ where: { id: chatId } });
-    if (!chat) return false;
+    if (!chat) return null;
     const messages = (
       await prisma.support_messages.findMany({
         where: { chat_id: chat.id },
@@ -89,90 +201,71 @@ export async function processGovernedSupportChat(chatId: number) {
         take: 15,
       })
     ).reverse();
-    const last = messages.at(-1);
-    if (!last || last.sender_id !== chat.customer_id) return false;
-
     const customer =
       chat.customer_id > 0
         ? await prisma.customerUser.findUnique({ where: { id: chat.customer_id } })
         : null;
     const conversation = await canonicalConversation(chat);
-    const safeInput = redactSensitiveTravelData(last.content);
-    await prisma.channelMessage.upsert({
-      where: { idempotencyKey: `support_message:${last.id}` },
-      update: {},
-      create: {
-        conversationId: conversation.id,
+    return { chat, messages, customer, conversation };
+  },
+  async reserveInbound(context, messageId, body) {
+    const idempotencyKey = `support_message:${messageId}`;
+    const existing = await prisma.channelMessage.findUnique({
+      where: { idempotencyKey },
+      select: { id: true },
+    });
+    if (existing) return false;
+    await prisma.channelMessage.create({
+      data: {
+        conversationId: context.conversation.id,
         channel: 'chat',
         direction: 'inbound',
         senderType: 'traveller',
-        senderRef: String(chat.customer_id),
-        body: safeInput,
-        idempotencyKey: `support_message:${last.id}`,
+        senderRef: String(context.chat.customer_id),
+        body,
+        idempotencyKey,
       },
     });
-
-    const triage = triageMessage(safeInput);
-    let reply: string;
-    if (!triage.autoReplyable) {
-      const recoveryReply =
-        triage.category === 'booking_issue' && customer
-          ? await openSosRecovery(customer.id, safeInput)
-          : null;
-      reply = recoveryReply ?? urgentAcknowledgement(safeInput);
-      await prisma.$transaction([
-        prisma.callback_requests.create({
-          data: {
-            name: customer?.name ?? chat.guest_name ?? 'Traveller',
-            phone: customer?.phone ?? chat.guest_phone ?? '',
-            destination: null,
-            status: 'pending',
-          },
-        }),
-        prisma.travelConversation.update({
-          where: { id: conversation.id },
-          data: { status: 'escalated', mayaMode: 'human_only' },
-        }),
-        prisma.maya_activity_log.create({
-          data: {
-            area: 'on_trip',
-            action: 'urgent_support_escalation',
-            summary: `${triage.category} support chat #${chat.id} escalated to staff.`,
-            status: 'attention',
-          },
-        }),
-      ]);
-    } else {
-      const history: MayaTurn[] = [];
-      for (const message of messages.slice(0, -1)) {
-        const role = message.sender_id === chat.customer_id ? 'user' : 'model';
-        const text = redactSensitiveTravelData(message.content);
-        const previous = history.at(-1);
-        if (previous?.role === role) previous.parts[0]!.text += `\n${text}`;
-        else history.push({ role, parts: [{ text }] });
-      }
-      while (history[0]?.role === 'model') history.shift();
-      const brain = new MayaBrain(createMayaDeps(), env.maya.model);
-      const response = await brain.respond({
-        input: { text: safeInput },
-        history,
-        ctx: {
-          channel: 'chat',
-          sessionId: conversation.id,
-          callerName: customer?.name ?? chat.guest_name,
-          callerPhone: customer?.phone ?? chat.guest_phone,
+    return true;
+  },
+  async escalate(context, triage, safeInput) {
+    const recoveryReply =
+      triage.category === 'booking_issue' && context.customer
+        ? await openSosRecovery(context.customer.id, safeInput)
+        : null;
+    const reply = recoveryReply ?? urgentAcknowledgement(safeInput);
+    await prisma.$transaction([
+      prisma.callback_requests.create({
+        data: {
+          name: context.customer?.name ?? context.chat.guest_name ?? 'Traveller',
+          phone: context.customer?.phone ?? context.chat.guest_phone ?? '',
+          destination: null,
+          status: 'pending',
         },
-      });
-      reply = response.text;
-    }
-
+      }),
+      prisma.travelConversation.update({
+        where: { id: context.conversation.id },
+        data: { status: 'escalated', mayaMode: 'human_only' },
+      }),
+      prisma.maya_activity_log.create({
+        data: {
+          area: 'on_trip',
+          action: 'urgent_support_escalation',
+          summary: `${triage.category} support chat #${context.chat.id} escalated to staff.`,
+          status: 'attention',
+        },
+      }),
+    ]);
+    return reply;
+  },
+  async saveReply(context, reply) {
     const saved = await prisma.support_messages.create({
-      data: { chat_id: chat.id, sender_id: 0, content: reply },
+      data: { chat_id: context.chat.id, sender_id: 0, content: reply },
     });
     await prisma.$transaction([
       prisma.channelMessage.create({
         data: {
-          conversationId: conversation.id,
+          conversationId: context.conversation.id,
           channel: 'chat',
           direction: 'outbound',
           senderType: 'maya',
@@ -181,14 +274,44 @@ export async function processGovernedSupportChat(chatId: number) {
           idempotencyKey: `support_message:${saved.id}`,
         },
       }),
-      prisma.support_chats.update({ where: { id: chat.id }, data: { agent_id: 0 } }),
+      prisma.support_chats.update({ where: { id: context.chat.id }, data: { agent_id: 0 } }),
     ]);
-    return true;
-  } finally {
-    await prisma.support_chats
-      .update({ where: { id: chatId }, data: { ai_is_typing: false } })
-      .catch(() => undefined);
-  }
+  },
+  async recordProviderFailure(context) {
+    await prisma.maya_activity_log.create({
+      data: {
+        area: 'support',
+        action: 'support_reply_provider_failure',
+        summary: `Support chat #${context.chat.id} needs staff review after a reply provider failure.`,
+        status: 'attention',
+      },
+    });
+  },
+};
+
+const supportReplyProvider: SupportChatReplyProvider = {
+  async respond({ safeInput, history, context }) {
+    const response = await new MayaBrain(createMayaDeps(), env.maya.model).respond({
+      input: { text: safeInput },
+      history,
+      ctx: {
+        channel: 'chat',
+        sessionId: context.conversationId,
+        callerName: context.callerName,
+        callerPhone: context.callerPhone,
+      },
+    });
+    return response.text;
+  },
+};
+
+const processSupportChat = createGovernedSupportChatProcessor({
+  repository: supportChatRepository,
+  replyProvider: supportReplyProvider,
+});
+
+export async function processGovernedSupportChat(chatId: number) {
+  return processSupportChat(chatId);
 }
 
 export async function processGovernedSupportChats() {
