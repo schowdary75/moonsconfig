@@ -150,7 +150,9 @@ const schema = Joi.object({
   INSURANCE_PROVIDER: Joi.string().allow('').default(''),
   INSURANCE_API_KEY: Joi.string().allow('').default(''),
   INVENTORY_PROVIDER: Joi.string().allow('').default(''),
+  INVENTORY_API_BASE_URL: Joi.string().uri().allow('').default(''),
   INVENTORY_API_KEY: Joi.string().allow('').default(''),
+  INVENTORY_TIMEOUT_MS: Joi.number().integer().min(100).max(60_000).default(20_000),
   CRON_ENABLED: Joi.boolean().truthy('true').falsy('false').default(true),
   LEGACY_SESSION_ENABLED: Joi.boolean().truthy('true').falsy('false').default(true),
   LEGACY_ROUTING_ENABLED: Joi.boolean().truthy('true').falsy('false').default(false),
@@ -318,7 +320,11 @@ export const env = {
     },
     inventory: {
       provider: value.INVENTORY_PROVIDER as string,
-      configured: Boolean(value.INVENTORY_PROVIDER && value.INVENTORY_API_KEY),
+      configured: Boolean(
+        value.INVENTORY_PROVIDER && value.INVENTORY_API_BASE_URL && value.INVENTORY_API_KEY,
+      ),
+      baseUrl: value.INVENTORY_API_BASE_URL as string,
+      timeoutMs: value.INVENTORY_TIMEOUT_MS as number,
     },
     payments: {
       provider: 'razorpay',
