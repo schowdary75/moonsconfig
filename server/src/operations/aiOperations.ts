@@ -199,13 +199,56 @@ export const adminAiGenerateAudienceRule = defineOperation({ method: 'POST' })
     return res.response.text().trim();
   });
 
+const visualImageMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'] as const;
+const visualImageMaxBytes = 10 * 1024 * 1024;
+const visualImageMaxBase64Characters = Math.ceil(visualImageMaxBytes / 3) * 4;
+
+function hasVisualImageSignature(bytes: Buffer, mimeType: (typeof visualImageMimeTypes)[number]) {
+  if (mimeType === 'image/jpeg') {
+    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+  if (mimeType === 'image/png') {
+    return (
+      bytes.length >= 8 &&
+      bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+    );
+  }
+  if (mimeType === 'image/webp') {
+    return (
+      bytes.length >= 12 &&
+      bytes.subarray(0, 4).toString('ascii') === 'RIFF' &&
+      bytes.subarray(8, 12).toString('ascii') === 'WEBP'
+    );
+  }
+  return (
+    bytes.length >= 12 &&
+    bytes.subarray(4, 8).toString('ascii') === 'ftyp' &&
+    ['avif', 'avis'].includes(bytes.subarray(8, 12).toString('ascii'))
+  );
+}
+
 export const adminAiVisualScrapbook = defineOperation({ method: 'POST' })
   .validator(
-    z.object({ auth: legacy.adminAuthSchema, base64Data: z.string(), mimeType: z.string() }),
+    z.object({
+      auth: legacy.adminAuthSchema,
+      base64Data: z.string().min(1).max(visualImageMaxBase64Characters),
+      mimeType: z.enum(visualImageMimeTypes),
+    }),
   )
   .handler(async ({ data }) => {
     await legacy.requireAdmin(data.auth);
     if (!process.env.GEMINI_API_KEY) throw new Error('Gemini API Key missing');
+
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(data.base64Data) || data.base64Data.length % 4 !== 0) {
+      throw new Error('Invalid image encoding');
+    }
+    const imageBytes = Buffer.from(data.base64Data, 'base64');
+    if (imageBytes.length < 1 || imageBytes.length > visualImageMaxBytes) {
+      throw new Error('Image must be between 1 byte and 10 MiB');
+    }
+    if (!hasVisualImageSignature(imageBytes, data.mimeType)) {
+      throw new Error('Image content does not match its declared type');
+    }
 
     const { GoogleGenerativeAI } = await import(/* @vite-ignore */ '@google/generative-ai');
     const genAI = await legacy.getGenAI();
