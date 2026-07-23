@@ -238,10 +238,81 @@ and provider-dependent workflows report unconfigured capabilities instead of fab
 
 Read [docs/architecture.md](docs/architecture.md) for the runtime design.
 
-## Quick start with Docker
+## One-command start for non-developers
 
-This is the recommended path because it starts MySQL, Redis, the API, worker, client, and Nginx
-together.
+The launcher installs the complete application stack inside Docker. You do **not** need to install
+Node.js, npm, MySQL, Redis, Nginx, Prisma, or any project package on your computer.
+
+The only prerequisite is:
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) on Windows or macOS, or Docker
+  Engine with the Docker Compose v2 plugin on Linux.
+
+Docker itself must be installed separately because it requires operating-system administrator
+approval and, on Windows or macOS, virtualization support. After Docker is installed, start it and
+wait until it reports that the engine is running.
+
+### Linux or macOS
+
+From the cloned repository:
+
+```bash
+chmod +x start.sh stop.sh
+./start.sh
+```
+
+### Windows
+
+Start Docker Desktop, open the repository in **Git Bash**, and run:
+
+```bash
+./start.sh
+```
+
+You can also use WSL with Docker Desktop's WSL integration enabled:
+
+```bash
+cd /mnt/c/path/to/moonsconfig
+./start.sh
+```
+
+PowerShell and Command Prompt do not run `.sh` files directly; use Git Bash or WSL for these two
+commands.
+
+### What `start.sh` does
+
+On the first run it:
+
+1. Checks that Docker and Docker Compose v2 are installed and running.
+2. Uses Node 24 inside a temporary Docker container to create an ignored `.env` with unique local
+   database passwords, signing secrets, encryption keys, and an administrator password.
+3. Pulls and builds Node 24, MySQL 8.4, Redis 7.4, Nginx, the API, worker, and React application.
+4. Starts the containers, applies both Prisma migration sets, and waits for every required service
+   to become healthy.
+5. Creates the initial administrator and role permissions.
+6. Prints the application URL and local login details.
+7. Stays open with live logs so the window does not close while you are using it.
+
+Open <http://localhost:8080> when startup finishes. Pressing `Ctrl+C` closes only the live log
+viewer—the application keeps running in Docker.
+
+To stop everything without deleting the database, uploads, or Redis data:
+
+```bash
+./stop.sh
+```
+
+Run `./start.sh` again whenever you want to restart it. Existing configuration and data are reused.
+For an unattended or background-only start, use `./start.sh --no-logs`.
+
+> Keep `.env` private. It contains the local passwords printed by the launcher and is already
+> excluded from Git. Do not delete it while keeping the Docker database volume, because the
+> generated database password must continue to match that existing data.
+
+## Manual Docker setup
+
+Use these steps when you want to control each Docker command yourself. For the easiest setup, use
+`./start.sh` above.
 
 ### Prerequisites
 
@@ -407,26 +478,29 @@ assets and are public by design.
 
 ## Commands
 
-| Command                          | Purpose                                                           |
-| -------------------------------- | ----------------------------------------------------------------- |
-| `npm run setup:env`              | Create an ignored local `.env` with generated development secrets |
-| `npm run dev:app`                | Run client and API with hot reload                                |
-| `npm run dev`                    | Run client, API, and worker                                       |
-| `npm run build`                  | Build all workspaces                                              |
-| `npm run lint`                   | Run workspace ESLint checks                                       |
-| `npm run typecheck`              | Run TypeScript checks                                             |
-| `npm test`                       | Run Vitest/Supertest suites                                       |
-| `npm run format:check`           | Verify Prettier formatting                                        |
-| `npm run prisma:generate`        | Generate tenant and platform Prisma clients                       |
-| `npm run prisma:deploy`          | Apply tenant database migrations                                  |
-| `npm run prisma:deploy:platform` | Apply platform database migrations                                |
-| `npm run manifest:generate`      | Refresh the migration manifest                                    |
-| `npm run docker:up`              | Build and run Docker Compose in the foreground                    |
-| `npm run docker:down`            | Stop the Compose stack                                            |
+| Command                          | Purpose                                                            |
+| -------------------------------- | ------------------------------------------------------------------ |
+| `./start.sh`                     | Install, configure, start, initialize, and follow the Docker stack |
+| `./stop.sh`                      | Stop the Docker stack without deleting local data                  |
+| `npm run setup:env`              | Create an ignored local `.env` with generated development secrets  |
+| `npm run dev:app`                | Run client and API with hot reload                                 |
+| `npm run dev`                    | Run client, API, and worker                                        |
+| `npm run build`                  | Build all workspaces                                               |
+| `npm run lint`                   | Run workspace ESLint checks                                        |
+| `npm run typecheck`              | Run TypeScript checks                                              |
+| `npm test`                       | Run Vitest/Supertest suites                                        |
+| `npm run format:check`           | Verify Prettier formatting                                         |
+| `npm run prisma:generate`        | Generate tenant and platform Prisma clients                        |
+| `npm run prisma:deploy`          | Apply tenant database migrations                                   |
+| `npm run prisma:deploy:platform` | Apply platform database migrations                                 |
+| `npm run manifest:generate`      | Refresh the migration manifest                                     |
+| `npm run docker:up`              | Build and run Docker Compose in the foreground                     |
+| `npm run docker:down`            | Stop the Compose stack                                             |
 
 ## Project structure
 
 ```text
+start.sh / stop.sh      One-command Docker launcher for non-developers
 client/                 React application, route-map tools, pages, and UI
 server/
   prisma/               Tenant schema, seed, and migrations
