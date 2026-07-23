@@ -71,6 +71,7 @@ import {
 } from '@/lib/api/db.functions';
 import { type FileInfo, useWebRTCFileTransfer } from '../hooks/use-webrtc-file-transfer';
 import { getSocket } from '../socket/socketClient';
+import { keepChatFocusInside, shouldSendChatMessage } from './chatAccessibility';
 
 type ChatTab = 'team' | 'customers';
 type TeamPartner = { id: string; type: string; name: string };
@@ -163,6 +164,7 @@ function formatFileSize(bytes: number) {
 export function GlobalChatWidget() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [transportStatus, setTransportStatus] = useState<'live' | 'polling'>('polling');
   const [chatTab, setChatTab] = useState<ChatTab>('team');
   const [activePartner, setActivePartner] = useState<TeamPartner | null>(null);
   const [activeRequestId, setActiveRequestId] = useState<number | null>(() => {
@@ -208,6 +210,12 @@ export function GlobalChatWidget() {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTypingSignalRef = useRef(0);
   const lastActivityTimeRef = useRef(Date.now());
+  const launcherRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const chatHeadingId = React.useId();
+  const chatConnectionId = React.useId();
+  const chatOwnershipId = React.useId();
 
   useEffect(() => {
     const handleActivity = () => {
@@ -386,8 +394,8 @@ export function GlobalChatWidget() {
 
       osc.start();
       osc.stop(ctx.currentTime + 0.3);
-    } catch (e) {
-      console.error('Failed to play message sound', e);
+    } catch {
+      console.error('Failed to play message sound');
     }
   }, []);
 
@@ -496,9 +504,17 @@ export function GlobalChatWidget() {
   // queries immediately. Polling remains as the fallback transport.
   const queryClient = useQueryClient();
   useEffect(() => {
-    if (!user?.session_token) return;
+    if (!user?.session_token) {
+      setTransportStatus('polling');
+      return;
+    }
     const socket = getSocket();
-    if (!socket) return;
+    if (!socket) {
+      setTransportStatus('polling');
+      return;
+    }
+    const onConnect = () => setTransportStatus('live');
+    const onDisconnect = () => setTransportStatus('polling');
     const onGlobalMessage = () => {
       void queryClient.invalidateQueries({ queryKey: ['chat-history'] });
       void queryClient.invalidateQueries({ queryKey: ['chat-updates'] });
@@ -511,14 +527,24 @@ export function GlobalChatWidget() {
     };
     socket.on('chat:global-message', onGlobalMessage);
     socket.on('chat:support-message', onSupportMessage);
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    setTransportStatus(socket.connected ? 'live' : 'polling');
     if (!socket.connected) socket.connect();
     return () => {
       socket.off('chat:global-message', onGlobalMessage);
       socket.off('chat:support-message', onSupportMessage);
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
     };
   }, [user?.session_token, queryClient]);
 
-  const { data: roster = [], refetch: refetchRoster } = useQuery({
+  const {
+    data: roster = [],
+    refetch: refetchRoster,
+    isPending: isRosterPending,
+    isError: isRosterError,
+  } = useQuery({
     queryKey: ['chat-roster', entityId],
     queryFn: () =>
       getGlobalChatRoster({
@@ -529,7 +555,12 @@ export function GlobalChatWidget() {
     refetchIntervalInBackground: true,
   });
 
-  const { data: teamHistory = [], refetch: refetchTeamHistory } = useQuery({
+  const {
+    data: teamHistory = [],
+    refetch: refetchTeamHistory,
+    isPending: isTeamHistoryPending,
+    isError: isTeamHistoryError,
+  } = useQuery({
     queryKey: ['chat-history', entityId, activePartner?.id],
     queryFn: () =>
       getGlobalChatHistory({
@@ -638,7 +669,7 @@ export function GlobalChatWidget() {
     };
     recognition.onerror = (event: any) => {
       if (!['aborted', 'no-speech'].includes(event.error)) {
-        console.error('Maya voice recognition failed:', event.error);
+        console.error('Maya voice recognition failed');
       }
     };
     recognition.onend = () => {
@@ -649,8 +680,8 @@ export function GlobalChatWidget() {
     };
     try {
       recognition.start();
-    } catch (error) {
-      console.error('Could not start Maya voice recognition:', error);
+    } catch {
+      console.error('Could not start Maya voice recognition');
     }
   }, [auth, entityId, refetchTeamHistory, speakMayaReply, stopMayaRecognition]);
   resumeMayaListeningRef.current = startMayaListening;
@@ -725,7 +756,12 @@ export function GlobalChatWidget() {
 
   // Support chats keep polling while the widget is closed (slower cadence) so the
   // unread badge and notification sound stay live for staff.
-  const { data: supportChats = [], refetch: refetchSupportChats } = useQuery({
+  const {
+    data: supportChats = [],
+    refetch: refetchSupportChats,
+    isPending: isSupportChatsPending,
+    isError: isSupportChatsError,
+  } = useQuery({
     queryKey: ['support-chats', user?.id],
     queryFn: () => getAllSupportChats({ data: { auth: auth! } }),
     enabled: canHandleCustomers && !!auth,
@@ -936,7 +972,12 @@ export function GlobalChatWidget() {
     }
   }, [incomingSignals, handleSignal, handleFileSignal]);
 
-  const { data: supportMessages = [], refetch: refetchSupportMessages } = useQuery({
+  const {
+    data: supportMessages = [],
+    refetch: refetchSupportMessages,
+    isPending: isSupportMessagesPending,
+    isError: isSupportMessagesError,
+  } = useQuery({
     queryKey: ['support-chat-messages', activeRequestId],
     queryFn: () =>
       getAdminSupportChatMessages({
@@ -962,7 +1003,12 @@ export function GlobalChatWidget() {
     !!guestToken &&
     !!guestName.trim() &&
     guestMobile.trim().length >= 8;
-  const { data: guestChatData, refetch: refetchGuestChat } = useQuery({
+  const {
+    data: guestChatData,
+    refetch: refetchGuestChat,
+    isPending: isGuestChatPending,
+    isError: isGuestChatError,
+  } = useQuery({
     queryKey: ['guest-support-chat', guestToken],
     queryFn: () =>
       getGuestSupportChat({
@@ -1023,6 +1069,21 @@ export function GlobalChatWidget() {
     return 'Customer Support';
   }, [activePartner, chatTab, currentChat, showGuestPrompt, user]);
 
+  const connectionLabel =
+    transportStatus === 'live' ? 'Connected with live updates' : 'Connected with polling fallback';
+  const ownershipLabel =
+    activeRequestId && currentChat
+      ? currentChat.agent_id === 0 || currentChat.agent_id == null
+        ? 'Maya is handling this conversation. Staff can take over.'
+        : 'A support teammate is handling this conversation.'
+      : !user && guestChat
+        ? guestChat.agent_id === 0 || guestChat.agent_id == null
+          ? 'Maya is handling this conversation with staff available.'
+          : 'A support teammate is handling this conversation.'
+        : activePartner
+          ? `Conversation with ${activePartner.name}`
+          : 'Choose a conversation or start a new support chat.';
+
   const handleOpen = () => {
     setIsOpen(true);
     if (!user && (!guestName || guestMobile.trim().length < 8)) setShowGuestPrompt(true);
@@ -1031,6 +1092,17 @@ export function GlobalChatWidget() {
       void Notification.requestPermission();
     }
   };
+
+  const closeWidget = React.useCallback(() => {
+    setIsOpen(false);
+    window.requestAnimationFrame(() => launcherRef.current?.focus());
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const frame = window.requestAnimationFrame(() => headingRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [isOpen]);
 
   // Tab-title unread badge, e.g. "(2) MooNsConfig".
   const baseTitleRef = useRef<string | null>(null);
@@ -1154,9 +1226,8 @@ export function GlobalChatWidget() {
       setNewGroupName('');
       setSelectedGroupMembers([]);
       setActivePartner({ id: groupId, type: 'group', name: newGroupName.trim() });
-    } catch (e) {
-      console.error(e);
-      alert('Failed to create group');
+    } catch {
+      toast.error('The group could not be created. Please try again.');
     } finally {
       setIsCreatingGroup(false);
     }
@@ -1197,8 +1268,8 @@ export function GlobalChatWidget() {
       await handoverChatToAI({ data: { chatId: activeRequestId, auth } });
       refetchSupportChats();
       refetchSupportMessages();
-    } catch (e) {
-      console.error('Handover failed:', e);
+    } catch {
+      toast.error('Maya handover could not be completed. Please try again.');
     } finally {
       setAiHandingOver(false);
     }
@@ -1208,27 +1279,76 @@ export function GlobalChatWidget() {
     <>
       {!isOpen ? (
         <button
+          ref={launcherRef}
+          type="button"
           onClick={handleOpen}
-          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-2xl transition-transform hover:scale-105 hover:bg-primary/90"
+          aria-label={
+            unreadCount > 0
+              ? `Open customer support chat, ${unreadCount} unread ${unreadCount === 1 ? 'message' : 'messages'}`
+              : 'Open customer support chat'
+          }
+          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-2xl transition-transform hover:scale-105 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
         >
-          <MessageSquare className="h-6 w-6" />
+          <MessageSquare className="h-6 w-6" aria-hidden="true" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow ring-2 ring-background">
+            <span
+              aria-hidden="true"
+              className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow ring-2 ring-background"
+            >
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
         </button>
       ) : (
-        <div className="fixed bottom-6 right-6 z-[60] flex h-[500px] max-h-[80vh] w-[350px] flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl animate-in slide-in-from-bottom-5">
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={chatHeadingId}
+          aria-describedby={`${chatConnectionId} ${chatOwnershipId}`}
+          tabIndex={-1}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              closeWidget();
+              return;
+            }
+            if (dialogRef.current) keepChatFocusInside(event.nativeEvent, dialogRef.current);
+          }}
+          className="fixed bottom-3 left-3 right-3 z-[60] flex h-[min(500px,calc(100dvh-1.5rem))] max-h-[80vh] w-auto flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl animate-in slide-in-from-bottom-5 focus:outline-none sm:bottom-6 sm:left-auto sm:right-6 sm:h-[500px] sm:w-[350px]"
+        >
           <div className="flex items-center justify-between border-b p-3 shadow-sm bg-primary text-primary-foreground">
             <div className="flex items-center gap-2">
               {(activePartner || activeRequestId) && (
-                <button onClick={handleBack} className="rounded p-1 hover:bg-primary-foreground/20">
-                  <ChevronLeft className="h-4 w-4" />
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  aria-label="Back to conversations"
+                  className="rounded p-1 hover:bg-primary-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
+                >
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                 </button>
               )}
               <div className="flex flex-col">
-                <h3 className="font-semibold">{headerTitle}</h3>
+                <h3
+                  ref={headingRef}
+                  id={chatHeadingId}
+                  tabIndex={-1}
+                  className="font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
+                >
+                  {headerTitle}
+                </h3>
+                <span
+                  id={chatConnectionId}
+                  role="status"
+                  aria-live="polite"
+                  className="text-[10px] opacity-80"
+                >
+                  {connectionLabel}
+                </span>
+                <span id={chatOwnershipId} className="sr-only">
+                  {ownershipLabel}
+                </span>
                 {activePartner && (
                   <div className="flex items-center gap-1.5 text-[10px] opacity-80">
                     {(() => {
@@ -1308,10 +1428,12 @@ export function GlobalChatWidget() {
                 </>
               )}
               <button
-                onClick={() => setIsOpen(false)}
-                className="rounded p-2 hover:bg-primary-foreground/20"
+                type="button"
+                onClick={closeWidget}
+                aria-label="Close customer support chat"
+                className="rounded p-2 hover:bg-primary-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
               >
-                <Minus className="h-4 w-4" />
+                <Minus className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -1427,8 +1549,28 @@ export function GlobalChatWidget() {
             ) : user && chatTab === 'team' && !activePartner ? (
               <div className="flex h-full flex-col">
                 <div className="flex-1 space-y-2 overflow-y-auto p-2">
-                  {roster.filter((r) => r.entity_id !== entityId).length === 0 ? (
-                    <div className="p-4 text-center text-xs text-muted-foreground">
+                  {isRosterPending ? (
+                    <div
+                      role="status"
+                      tabIndex={0}
+                      className="p-4 text-center text-xs text-muted-foreground"
+                    >
+                      Loading team conversations…
+                    </div>
+                  ) : isRosterError ? (
+                    <div
+                      role="alert"
+                      tabIndex={0}
+                      className="p-4 text-center text-xs text-destructive"
+                    >
+                      Team conversations could not be loaded. They will retry automatically.
+                    </div>
+                  ) : roster.filter((r) => r.entity_id !== entityId).length === 0 ? (
+                    <div
+                      role="status"
+                      tabIndex={0}
+                      className="p-4 text-center text-xs text-muted-foreground"
+                    >
                       No team members online yet.
                     </div>
                   ) : (
@@ -1510,11 +1652,35 @@ export function GlobalChatWidget() {
             ) : user && chatTab === 'customers' && !activeRequestId ? (
               <div className="h-full space-y-2 overflow-y-auto p-2">
                 {!canHandleCustomers ? (
-                  <div className="p-4 text-center text-xs text-muted-foreground">
+                  <div
+                    role="status"
+                    tabIndex={0}
+                    className="p-4 text-center text-xs text-muted-foreground"
+                  >
                     Customer chats are available for sales, support, and admin users.
                   </div>
+                ) : isSupportChatsPending ? (
+                  <div
+                    role="status"
+                    tabIndex={0}
+                    className="p-4 text-center text-xs text-muted-foreground"
+                  >
+                    Loading customer conversations…
+                  </div>
+                ) : isSupportChatsError ? (
+                  <div
+                    role="alert"
+                    tabIndex={0}
+                    className="p-4 text-center text-xs text-destructive"
+                  >
+                    Customer conversations could not be loaded. They will retry automatically.
+                  </div>
                 ) : supportChats.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-muted-foreground">
+                  <div
+                    role="status"
+                    tabIndex={0}
+                    className="p-4 text-center text-xs text-muted-foreground"
+                  >
                     No customer requests yet.
                   </div>
                 ) : (
@@ -1673,6 +1839,8 @@ export function GlobalChatWidget() {
                 placeholder="Message..."
                 disabled={false}
                 isGroup={activePartner.type === 'group'}
+                loading={isTeamHistoryPending}
+                error={isTeamHistoryError}
               />
             ) : !user ? (
               <div className="flex h-full flex-col">
@@ -1706,6 +1874,8 @@ export function GlobalChatWidget() {
                     placeholder="Type your message..."
                     disabled={guestChat?.status === 'closed'}
                     emptyState="Hi! Tell us how we can help and our team will reply here."
+                    loading={isGuestChatPending}
+                    error={isGuestChatError}
                   />
                 </div>
               </div>
@@ -1758,6 +1928,8 @@ export function GlobalChatWidget() {
                     : undefined
                 }
                 onSmartReplyClick={(reply) => handleCustomerSend(reply)}
+                loading={isSupportMessagesPending}
+                error={isSupportMessagesError}
               />
             )}
           </div>
@@ -2105,6 +2277,8 @@ function Conversation({
   isTyping,
   typingPartnerName,
   isPartnerOnlineOrIdle,
+  loading = false,
+  error = false,
 }: {
   messages: any[];
   currentEntityId?: string;
@@ -2135,8 +2309,11 @@ function Conversation({
   isTyping?: boolean;
   typingPartnerName?: string;
   isPartnerOnlineOrIdle?: boolean;
+  loading?: boolean;
+  error?: boolean;
 }) {
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [pendingAttachments, setPendingAttachments] = useState<
     { name: string; public_url: string; isImage: boolean }[]
   >([]);
@@ -2153,6 +2330,8 @@ function Conversation({
   const p2pFileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const composerHelpId = React.useId();
+  const uploadStatusId = React.useId();
   const prevMessageCountRef = useRef(-1);
   const prevEntityIdRef = useRef(currentEntityId);
   const transferBytes = transferProgress ? transferProgress.sent || transferProgress.received : 0;
@@ -2202,6 +2381,7 @@ function Conversation({
 
   const processFile = async (file: File) => {
     try {
+      setUploadError(null);
       setIsUploading(true);
       const base64 = await fileToBase64(file);
       const res = await uploadChatAttachment({
@@ -2213,7 +2393,7 @@ function Conversation({
         { name: file.name, public_url: res.public_url, isImage },
       ]);
     } catch (e: any) {
-      alert(e.message || 'Upload failed');
+      setUploadError(e?.message || 'The attachment could not be uploaded. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -2315,9 +2495,26 @@ function Conversation({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden p-4">
-        {messages.length === 0 ? (
-          <div className="mt-4 text-center text-xs text-muted-foreground">
+      <div
+        role="log"
+        aria-label="Conversation messages"
+        aria-live="polite"
+        aria-relevant="additions"
+        aria-atomic="false"
+        aria-busy={loading}
+        tabIndex={0}
+        className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+      >
+        {loading ? (
+          <div role="status" className="mt-4 text-center text-xs text-muted-foreground">
+            Loading messages…
+          </div>
+        ) : error ? (
+          <div role="alert" className="mt-4 text-center text-xs text-destructive">
+            Messages could not be loaded. The conversation will retry automatically.
+          </div>
+        ) : messages.length === 0 ? (
+          <div role="status" className="mt-4 text-center text-xs text-muted-foreground">
             {emptyState || 'Send a message to start the conversation.'}
           </div>
         ) : (
@@ -2358,6 +2555,8 @@ function Conversation({
             return (
               <div
                 key={msg.id}
+                role="article"
+                aria-label={`${senderLabel}${sentAt ? ` at ${sentAt}` : ''}: ${msg.message_text}`}
                 className={`group flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
               >
                 <div className="relative max-w-[82%] min-w-0">
@@ -2472,7 +2671,11 @@ function Conversation({
           })
         )}
         {isTyping && typingPartnerName && (
-          <div className="flex items-center gap-2 text-muted-foreground mt-4 mb-2 px-2 text-xs animate-in fade-in slide-in-from-bottom-1">
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-2 text-muted-foreground mt-4 mb-2 px-2 text-xs animate-in fade-in slide-in-from-bottom-1"
+          >
             <div className="flex items-center gap-1 bg-muted/50 rounded-full px-3 py-2 shadow-sm border border-border/50">
               <span
                 className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce"
@@ -2494,7 +2697,10 @@ function Conversation({
       </div>
       <div className="relative flex flex-col border-t bg-card p-3">
         {needsMayaTakeover && (
-          <div className="mb-2 rounded-xl border border-emerald-200 bg-emerald-50/80 p-2 text-center">
+          <div
+            role="status"
+            className="mb-2 rounded-xl border border-emerald-200 bg-emerald-50/80 p-2 text-center"
+          >
             <Button
               size="sm"
               onClick={() => onTakeOver?.(activeChat.id)}
@@ -2565,9 +2771,11 @@ function Conversation({
                   </div>
                 )}
                 <button
+                  type="button"
                   onClick={() =>
                     setPendingAttachments((prev) => prev.filter((_, idx) => idx !== i))
                   }
+                  aria-label={`Remove attachment ${att.name}`}
                   className="absolute top-0.5 right-0.5 rounded-full bg-black/50 p-0.5 text-white hover:bg-black/70"
                 >
                   <X className="h-3 w-3" />
@@ -2577,7 +2785,11 @@ function Conversation({
           </div>
         )}
         {transferStatus !== 'idle' && fileInfo && (
-          <div className="mb-2 flex items-center gap-2 rounded-lg border bg-muted/40 px-2 py-1.5 text-xs shadow-sm">
+          <div
+            role="status"
+            aria-live="polite"
+            className="mb-2 flex items-center gap-2 rounded-lg border bg-muted/40 px-2 py-1.5 text-xs shadow-sm"
+          >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-blue-600">
               {transferStatus === 'completed' ? (
                 <Check className="h-4 w-4 text-emerald-600" />
@@ -2644,6 +2856,21 @@ function Conversation({
             )}
           </div>
         )}
+        {uploadError && (
+          <div
+            role="alert"
+            tabIndex={0}
+            className="mb-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+          >
+            {uploadError}
+          </div>
+        )}
+        <p id={composerHelpId} className="sr-only">
+          Press Enter to send. Press Shift and Enter for a new line.
+        </p>
+        <p id={uploadStatusId} role="status" aria-live="polite" className="sr-only">
+          {isUploading ? 'Uploading attachment.' : 'Attachment upload ready.'}
+        </p>
         <div className="flex items-center gap-1 rounded-[24px] bg-muted/60 p-1 pl-2 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
           <div className="relative flex-shrink-0">
             <Button
@@ -2655,6 +2882,8 @@ function Conversation({
                 setShowGifPicker(false);
               }}
               disabled={disabled || isUploading}
+              aria-label="Choose an emoji"
+              aria-expanded={showEmojiPicker}
               title="Emoji"
             >
               <Smile className="h-5 w-5" strokeWidth={1.5} />
@@ -2684,6 +2913,8 @@ function Conversation({
                 setShowEmojiPicker(false);
               }}
               disabled={disabled || isUploading}
+              aria-label="Choose a GIF"
+              aria-expanded={showGifPicker}
               title="GIF"
             >
               <ImageIcon className="h-5 w-5" strokeWidth={1.5} />
@@ -2707,7 +2938,7 @@ function Conversation({
             )}
           </div>
           {onSendFileP2P && (
-            <label className="flex-shrink-0">
+            <div className="flex-shrink-0">
               <input
                 type="file"
                 className="sr-only"
@@ -2718,44 +2949,49 @@ function Conversation({
                   if (p2pFileInputRef.current) p2pFileInputRef.current.value = '';
                 }}
                 disabled={disabled || transferStatus !== 'idle'}
+                tabIndex={-1}
+                aria-hidden="true"
               />
               <Button
+                type="button"
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 shrink-0 rounded-full text-blue-500 hover:bg-blue-500/10 hover:text-blue-600"
-                asChild
                 disabled={disabled || transferStatus !== 'idle'}
+                onClick={() => p2pFileInputRef.current?.click()}
+                aria-label="Send a peer-to-peer file"
               >
-                <span title="Send File Peer-to-Peer (Unlimited Size)">
-                  <Zap className="h-5 w-5" strokeWidth={1.5} />
-                </span>
+                <Zap className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />
               </Button>
-            </label>
+            </div>
           )}
-          <label className="flex-shrink-0">
+          <div className="flex-shrink-0">
             <input
               type="file"
               className="sr-only"
               ref={fileInputRef}
               onChange={handleFileChange}
               disabled={disabled || isUploading}
+              tabIndex={-1}
+              aria-hidden="true"
             />
             <Button
+              type="button"
               variant="ghost"
               size="icon"
               className="h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10"
-              asChild
               disabled={disabled || isUploading}
+              onClick={() => fileInputRef.current?.click()}
+              aria-label={isUploading ? 'Uploading attachment' : 'Attach a file'}
+              aria-describedby={uploadStatusId}
             >
-              <span>
-                {isUploading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Paperclip className="h-5 w-5" strokeWidth={1.5} />
-                )}
-              </span>
+              {isUploading ? (
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Paperclip className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />
+              )}
             </Button>
-          </label>
+          </div>
           <Textarea
             ref={textareaRef}
             value={inputValue}
@@ -2766,9 +3002,17 @@ function Conversation({
             placeholder={isUploading ? 'Uploading...' : placeholder || 'Type a message...'}
             className="h-9 min-h-9 min-w-0 flex-1 resize-none overflow-hidden whitespace-nowrap bg-transparent border-0 focus-visible:ring-0 shadow-none px-2 py-2 text-sm placeholder:text-muted-foreground"
             disabled={disabled || isUploading}
+            aria-label="Message"
+            aria-describedby={`${composerHelpId} ${uploadStatusId}`}
             onPaste={handlePaste}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
+              if (
+                shouldSendChatMessage({
+                  key: event.key,
+                  shiftKey: event.shiftKey,
+                  isComposing: event.nativeEvent.isComposing,
+                })
+              ) {
                 event.preventDefault();
                 if (!disabled && (inputValue.trim() || pendingAttachments.length > 0)) {
                   handleSend();
@@ -2781,6 +3025,7 @@ function Conversation({
             size="icon"
             className="h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10"
             disabled={disabled || isUploading}
+            aria-label="Record a voice message (coming soon)"
             title="Voice message (Coming soon)"
           >
             <Mic className="h-5 w-5" strokeWidth={1.5} />
@@ -2791,6 +3036,7 @@ function Conversation({
             disabled={
               disabled || (!inputValue.trim() && pendingAttachments.length === 0) || isUploading
             }
+            aria-label="Send message"
             className="h-8 w-8 shrink-0 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm ml-0.5"
           >
             <Send className="h-4 w-4 ml-0.5" />
