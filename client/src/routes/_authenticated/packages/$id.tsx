@@ -331,6 +331,7 @@ function PackageEditor() {
 
   const [activeTab, setActiveTab] = useState('overview');
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const exportBusyRef = useRef(false);
 
   const handleOpenRfqModal = () => setIsRfqModalOpen(true);
 
@@ -393,7 +394,7 @@ function PackageEditor() {
           desc: d.description || '',
           mode: d.route_mode || 'road',
         }));
-      iframeRef.current.contentWindow.postMessage(validPoints, '*');
+      iframeRef.current.contentWindow.postMessage(validPoints, window.location.origin);
     }
   };
 
@@ -418,18 +419,21 @@ function PackageEditor() {
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
       if (e.source !== iframeRef.current?.contentWindow) return;
       const msg = e.data;
       if (!msg || typeof msg !== 'object') return;
       if (msg.type === 'route-export-start') {
+        exportBusyRef.current = true;
         setExportState({ busy: true, label: 'Preparing…', progress: 0 });
       } else if (msg.type === 'route-export-progress') {
         setExportState({
           busy: true,
           label: msg.label || 'Rendering…',
-          progress: msg.progress || 0,
+          progress: Math.max(0, Math.min(1, Number(msg.progress) || 0)),
         });
       } else if (msg.type === 'route-export-done') {
+        exportBusyRef.current = false;
         setExportState({ busy: false, label: '', progress: 0 });
         const url = URL.createObjectURL(msg.blob as Blob);
         const a = document.createElement('a');
@@ -444,6 +448,7 @@ function PackageEditor() {
           `${msg.format === 'gif' ? 'GIF' : 'Video'} exported (${(msg.size / 1024 / 1024).toFixed(1)} MB).`,
         );
       } else if (msg.type === 'route-export-error') {
+        exportBusyRef.current = false;
         setExportState({ busy: false, label: '', progress: 0 });
         toast.error(`Export failed: ${msg.message}`);
       }
@@ -453,13 +458,20 @@ function PackageEditor() {
   }, [form.name]);
 
   const startRouteExport = (format: 'gif' | 'webm') => {
-    if (exportState.busy) return;
+    if (exportBusyRef.current) return;
     const stops = itineraryDays.filter((d) => d.route_lat && d.route_lng).length;
     if (stops < 2) {
       toast.error('Add at least two itinerary stops with coordinates first.');
       return;
     }
-    iframeRef.current?.contentWindow?.postMessage({ type: 'route-export', format }, '*');
+    const animator = iframeRef.current?.contentWindow;
+    if (!animator) {
+      toast.error('Route preview is still loading.');
+      return;
+    }
+    exportBusyRef.current = true;
+    setExportState({ busy: true, label: 'Preparing…', progress: 0 });
+    animator.postMessage({ type: 'route-export', format }, window.location.origin);
   };
 
   const saveItineraryDays = (days: ItineraryEditorDay[]) => {
@@ -1044,8 +1056,19 @@ function PackageEditor() {
             </div>
             <div className="flex items-center gap-2">
               {exportState.busy && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <div className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="flex items-center gap-2 text-xs text-muted-foreground"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <div
+                    className="h-1.5 w-28 overflow-hidden rounded-full bg-muted"
+                    role="progressbar"
+                    aria-label="Route export progress"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(exportState.progress * 100)}
+                  >
                     <div
                       className="h-full rounded-full bg-primary transition-all"
                       style={{ width: `${Math.round(exportState.progress * 100)}%` }}
@@ -1077,7 +1100,7 @@ function PackageEditor() {
             <iframe
               ref={iframeRef}
               onLoad={sendPointsToIframe}
-              src="/route-animator.html?v=2"
+              src="/route-animator.html?v=3"
               className="w-full h-full border-0 rounded-xl shadow-sm bg-black"
               title="Route Animator"
             />

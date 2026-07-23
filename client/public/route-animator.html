@@ -462,6 +462,21 @@
       .transport-btn:hover {
         filter: brightness(1.25);
       }
+      .transport-btn:focus-visible,
+      .speed-option:focus-visible {
+        outline: 3px solid #fff;
+        outline-offset: 2px;
+      }
+      .transport-btn:disabled {
+        cursor: not-allowed;
+        filter: none;
+        opacity: 0.45;
+      }
+      .transport-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
       .progress-wrap {
         flex: 1;
         min-width: 140px;
@@ -491,21 +506,42 @@
         align-items: center;
         gap: 6px;
         flex: none;
+        margin: 0;
+        padding: 0;
+        border: 0;
       }
       .speed-label {
         font-size: 10.5px;
         color: var(--text-dim);
         font-family: var(--font-mono);
       }
-      .speed-readout {
-        font-size: 11px;
-        color: var(--brass-bright);
+      .speed-option {
+        min-width: 34px;
+        min-height: 30px;
+        padding: 4px 6px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-dim);
+        cursor: pointer;
         font-family: var(--font-mono);
-        width: 38px;
+        font-size: 11px;
       }
-      input[type='range'] {
-        width: 70px;
-        accent-color: var(--brass);
+      .speed-option[aria-pressed='true'] {
+        border-color: var(--brass);
+        background: rgba(201, 162, 39, 0.2);
+        color: var(--brass-bright);
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
       }
 
       /* ---------- toast ---------- */
@@ -744,13 +780,21 @@
           font-size: 11px;
         }
         .playback-bar {
-          min-width: 88vw;
+          width: 94vw;
+          min-width: 0;
           max-width: 94vw;
           bottom: 10px;
           padding: 8px 12px;
           gap: 8px;
+          flex-wrap: wrap;
+          justify-content: center;
         }
-        .speed-wrap {
+        .progress-wrap {
+          order: 3;
+          flex-basis: 100%;
+          min-width: 0;
+        }
+        .speed-label {
           display: none;
         }
       }
@@ -792,22 +836,49 @@
       <div class="legend-row"><span class="legend-swatch swatch-rail"></span> Rail</div>
     </div>
 
-    <div class="playback-bar">
-      <button id="playBtn" class="transport-btn" title="Play">
-        <i class="fa-solid fa-play"></i>
-      </button>
-      <button id="resetBtn" class="transport-btn" title="Reset">
-        <i class="fa-solid fa-rotate-left"></i>
-      </button>
+    <div class="playback-bar" aria-label="Route playback controls">
+      <div class="transport-controls" role="group" aria-label="Playback">
+        <button id="playBtn" class="transport-btn" type="button" title="Play" aria-label="Play">
+          <i class="fa-solid fa-play" aria-hidden="true"></i>
+        </button>
+        <button id="pauseBtn" class="transport-btn" type="button" title="Pause" aria-label="Pause">
+          <i class="fa-solid fa-pause" aria-hidden="true"></i>
+        </button>
+        <button
+          id="resetBtn"
+          class="transport-btn"
+          type="button"
+          title="Restart"
+          aria-label="Restart"
+        >
+          <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+        </button>
+      </div>
       <div class="progress-wrap">
-        <div class="leg-text" id="legText">Add waypoints to plan your route.</div>
-        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="leg-text" id="legText" aria-live="polite">
+          Add waypoints to plan your route.
+        </div>
+        <div
+          id="playbackProgress"
+          class="progress-track"
+          role="progressbar"
+          aria-label="Journey progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+        >
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
       </div>
-      <div class="speed-wrap">
+      <fieldset class="speed-wrap">
+        <legend class="sr-only">Playback speed</legend>
         <span class="speed-label">SPEED</span>
-        <input id="speedSlider" type="range" min="0.5" max="3" step="0.25" value="1" />
-        <span id="speedReadout" class="speed-readout">1.00×</span>
-      </div>
+        <button type="button" class="speed-option" data-speed="0.5" aria-pressed="false">
+          0.5×
+        </button>
+        <button type="button" class="speed-option" data-speed="1" aria-pressed="true">1×</button>
+        <button type="button" class="speed-option" data-speed="2" aria-pressed="false">2×</button>
+      </fieldset>
     </div>
 
     <div id="toast" class="toast"></div>
@@ -819,7 +890,15 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-    <script>
+    <script type="module">
+      import {
+        createRouteTimeline,
+        getRouteTimelineStateFrame,
+        pauseRouteTimeline,
+        resumeRouteTimeline,
+        setRouteTimelineSpeed,
+      } from './route-animation-timeline.js';
+
       /* ===================== Cinematic Route Animator ===================== */
 
       const MODES = {
@@ -853,8 +932,7 @@
 
       let segments = [];
       let segIndex = 0;
-      let segElapsed = 0;
-      let segStartTS = 0;
+      let segmentTimeline = null;
       let runToken = 0;
       let animId = null;
       let isPlaying = false;
@@ -1486,22 +1564,42 @@
 
       /* ---------- animation engine ---------- */
       function setProgressBar(pct) {
-        progressFill.style.width = Math.max(0, Math.min(100, pct)) + '%';
+        const value = Math.max(0, Math.min(100, pct));
+        progressFill.style.width = value + '%';
+        document.getElementById('playbackProgress').setAttribute('aria-valuenow', String(value));
       }
 
       function updatePlayButton() {
         const btn = document.getElementById('playBtn');
         const icon = btn.querySelector('i');
+        const pauseBtn = document.getElementById('pauseBtn');
         if (isLoadingRoute) {
           icon.className = 'fa-solid fa-spinner fa-spin';
           btn.title = 'Charting route…';
-        } else if (isPlaying && !isPaused) {
-          icon.className = 'fa-solid fa-pause';
-          btn.title = 'Pause';
         } else {
           icon.className = 'fa-solid fa-play';
           btn.title = isPaused ? 'Resume' : 'Play';
+          btn.setAttribute('aria-label', isPaused ? 'Resume' : 'Play');
         }
+        btn.disabled = isLoadingRoute || (isPlaying && !isPaused);
+        pauseBtn.disabled = isLoadingRoute || !isPlaying || isPaused;
+      }
+
+      function setPlaybackSpeed(speed) {
+        speedMultiplier = [0.5, 1, 2].includes(speed) ? speed : 1;
+        if (segmentTimeline) {
+          segmentTimeline = setRouteTimelineSpeed(
+            segmentTimeline,
+            speedMultiplier,
+            performance.now(),
+          );
+        }
+        document.querySelectorAll('.speed-option').forEach(function (button) {
+          button.setAttribute(
+            'aria-pressed',
+            Number(button.dataset.speed) === speedMultiplier ? 'true' : 'false',
+          );
+        });
       }
 
       function stopAnimation() {
@@ -1514,7 +1612,7 @@
         movingMarker = null;
         activeLine = null;
         segIndex = 0;
-        segElapsed = 0;
+        segmentTimeline = null;
         if (progressFill) setProgressBar(0);
         updatePlayButton();
         if (legText)
@@ -1526,6 +1624,13 @@
 
       function beginSegment(i) {
         const seg = segments[i];
+        segmentTimeline = createRouteTimeline({
+          durationMs: segmentDuration(seg),
+          routePoints: points.length,
+          speed: speedMultiplier,
+          autoplay: true,
+          nowMs: performance.now(),
+        });
         activeLine = L.polyline([], {
           color: MODES[seg.mode].color,
           weight: 4.5,
@@ -1562,9 +1667,9 @@
         if (!isPlaying || isPaused) return;
 
         const seg = segments[segIndex];
-        const duration = segmentDuration(seg) / speedMultiplier;
-        const elapsed = ts - segStartTS;
-        const t = Math.min(1, elapsed / duration);
+        if (!segmentTimeline) return;
+        const timelineFrame = getRouteTimelineStateFrame(segmentTimeline, ts, 71);
+        const t = timelineFrame.progress;
         const et = easeInOutCubic(t);
         const pos = pointAtT(seg, et);
         const posAhead = pointAtT(seg, Math.min(1, et + 0.01));
@@ -1601,7 +1706,6 @@
           setTimeout(function () {
             if (myToken !== runToken) return;
             beginSegment(segIndex);
-            segStartTS = performance.now();
             animId = requestAnimationFrame(function (ts2) {
               stepAnimation(ts2, myToken);
             });
@@ -1609,7 +1713,6 @@
           return;
         }
 
-        segElapsed = elapsed;
         animId = requestAnimationFrame(function (ts2) {
           stepAnimation(ts2, myToken);
         });
@@ -1624,7 +1727,9 @@
         if (isPaused) {
           isPaused = false;
           isPlaying = true;
-          segStartTS = performance.now() - segElapsed;
+          if (segmentTimeline) {
+            segmentTimeline = resumeRouteTimeline(segmentTimeline, performance.now());
+          }
           updatePlayButton();
           const myToken = runToken;
           animId = requestAnimationFrame(function (ts) {
@@ -1668,7 +1773,7 @@
 
         segments = built.segments;
         segIndex = 0;
-        segElapsed = 0;
+        segmentTimeline = null;
         isPlaying = true;
         isPaused = false;
         updatePlayButton();
@@ -1688,23 +1793,32 @@
           }),
         );
         cameraCenter = map.getCenter();
-        map.flyToBounds(bounds, { padding: [90, 90], duration: 1.4, maxZoom: 8 });
+        map.flyToBounds(bounds, {
+          padding: [90, 90],
+          duration: prefersReducedMotion ? 0 : 1.4,
+          maxZoom: 8,
+        });
         dropWaypointLabel(points[0], true);
         legText.textContent = 'Charting the course…';
 
-        setTimeout(function () {
-          if (myToken !== runToken) return;
-          beginSegment(segIndex);
-          segStartTS = performance.now();
-          animId = requestAnimationFrame(function (ts) {
-            stepAnimation(ts, myToken);
-          });
-        }, 1500);
+        setTimeout(
+          function () {
+            if (myToken !== runToken) return;
+            beginSegment(segIndex);
+            animId = requestAnimationFrame(function (ts) {
+              stepAnimation(ts, myToken);
+            });
+          },
+          prefersReducedMotion ? 0 : 1500,
+        );
       }
 
       function pausePlayback() {
         if (!isPlaying || isPaused) return;
         isPaused = true;
+        if (segmentTimeline) {
+          segmentTimeline = pauseRouteTimeline(segmentTimeline, performance.now());
+        }
         if (animId) cancelAnimationFrame(animId);
         updatePlayButton();
       }
@@ -1712,6 +1826,7 @@
       function finishPlayback() {
         isPlaying = false;
         isPaused = false;
+        segmentTimeline = null;
         updatePlayButton();
         setProgressBar(100);
         fitAll(1.2);
@@ -1728,6 +1843,11 @@
         if (!map.hasLayer(previewLayer)) previewLayer.addTo(map);
         drawPreview();
         if (points.length) fitAll(1);
+      }
+
+      function restartPlayback() {
+        resetPlayback();
+        startPlayback();
       }
 
       /* ================= animated export (GIF / WebM) =================
@@ -2047,7 +2167,9 @@
 
       function post(msg) {
         try {
-          if (window.parent && window.parent !== window) window.parent.postMessage(msg, '*');
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage(msg, window.location.origin);
+          }
         } catch (e) {}
       }
       function setExportStatus(label, progress) {
@@ -2472,15 +2594,13 @@
           showToast('Coordinates captured — name it and press Add Point.');
         });
 
-        document.getElementById('playBtn').addEventListener('click', function () {
-          if (isLoadingRoute) return;
-          if (isPlaying && !isPaused) pausePlayback();
-          else startPlayback();
-        });
-        document.getElementById('resetBtn').addEventListener('click', resetPlayback);
-        document.getElementById('speedSlider').addEventListener('input', function (e) {
-          speedMultiplier = parseFloat(e.target.value);
-          document.getElementById('speedReadout').textContent = speedMultiplier.toFixed(2) + '×';
+        document.getElementById('playBtn').addEventListener('click', startPlayback);
+        document.getElementById('pauseBtn').addEventListener('click', pausePlayback);
+        document.getElementById('resetBtn').addEventListener('click', restartPlayback);
+        document.querySelectorAll('.speed-option').forEach(function (button) {
+          button.addEventListener('click', function () {
+            setPlaybackSpeed(Number(button.dataset.speed));
+          });
         });
         document.getElementById('panelToggle').addEventListener('click', function () {
           document.getElementById('controlPanel').classList.toggle('collapsed');
@@ -2488,6 +2608,7 @@
         });
 
         window.addEventListener('message', function (e) {
+          if (e.origin !== window.location.origin || e.source !== window.parent) return;
           if (e.data && e.data.type === 'route-export') {
             runExport(e.data.format === 'gif' ? 'gif' : 'webm');
             return;
@@ -2497,20 +2618,29 @@
             renderPointsList();
             resetPlayback();
             if (points.length > 1) {
-              startPlayback();
+              if (prefersReducedMotion) {
+                legText.textContent =
+                  'Reduced motion is enabled. The preview is paused; press Play to begin.';
+              } else {
+                startPlayback();
+              }
             } else if (points.length === 1) {
               fitAll(1);
+              legText.textContent = 'One-stop journey shown as a static preview.';
             }
           }
         });
 
         renderPointsList();
+        setPlaybackSpeed(1);
         updatePlayButton();
         loadSeaRoute().catch(function () {
           /* silently retried per-segment on first cruise leg */
         });
       }
 
+      // The hidden standalone editor still uses inline handlers for its point list.
+      Object.assign(window, { clearAll, deletePoint, movePoint });
       init();
     </script>
   </body>
