@@ -1,6 +1,12 @@
 # MooNsConfig
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square)](LICENSE)
+[![Node.js 24](https://img.shields.io/badge/Node.js-24-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=111827)](https://react.dev/)
+[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
+[![Security Policy](https://img.shields.io/badge/security-policy-2ea44f?style=flat-square&logo=github)](SECURITY.md)
+[![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-6f42c1?style=flat-square)](CONTRIBUTING.md)
 
 An open, AI-assisted travel operating system for running the complete traveller journey—from the
 first call or chat through itinerary curation, supplier pricing, proposals, booking, on-trip
@@ -537,4 +543,7 @@ vulnerabilities in a public issue; follow [SECURITY.md](SECURITY.md).
 
 ## License
 
-MooNsConfig is available under the [MIT License](LICENSE).
+Original MooNsConfig source code is available under the [MIT License](LICENSE), copyright 2026
+MooNsConfig. Third-party libraries, map data, hosted media, fonts, services, and container images
+retain their own licenses and terms. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the
+attribution and licensing guide.
