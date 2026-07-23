@@ -482,6 +482,10 @@ Leave optional values blank until you deliberately enable the related capability
 - Meta/WhatsApp
 - Flight-status, travel-rules, insurance, and inventory providers
 
+See the [inventory provider adapter guide](docs/inventory-provider-adapters.md) for the
+credential-free reference adapter, validation contract, timeout behavior, redaction rules, and
+catalogue fallback.
+
 Never place a server credential in a `VITE_*` variable. Vite variables are compiled into browser
 assets and are public by design.
 
