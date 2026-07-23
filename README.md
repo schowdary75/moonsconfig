@@ -2,13 +2,15 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An open travel operations platform for building visual itineraries, managing travel inventory,
-working with suppliers, and running the customer journey from lead to post-trip support.
+An open, AI-assisted travel operating system for running the complete traveller journey—from the
+first call or chat through itinerary curation, supplier pricing, proposals, booking, on-trip
+operations, and post-trip support.
 
-MooNsConfig combines animated and brochure-style route maps with packages, vendors, hotels, cars,
-flights, cruises, experiences, quotes, bookings, CRM, marketing, and multi-tenant SaaS operations.
-The application is a TypeScript monorepo with a React SPA, an Express API, MySQL, Prisma, Redis,
-BullMQ, and Nginx.
+MooNsConfig brings Maya, a governed travel agent, together with RFQs, vendor outreach, autonomous
+customer support, team chat, AI itinerary building, photo-to-trip curation, animated route maps,
+packages, hotels, cars, flights, cruises, experiences, CRM, payments, and multi-tenant SaaS
+operations. The application is a TypeScript monorepo with a React SPA, an Express API, MySQL,
+Prisma, Redis, BullMQ, Socket.IO, and Nginx.
 
 > This project is under active development. Core modules run locally without paid integrations.
 > AI, email, telephony, payments, SSO, live flight data, WhatsApp, and other provider-backed
@@ -20,14 +22,112 @@ Travel teams often build itineraries in one tool, maintain suppliers in another,
 manually, and track customers in a generic CRM. MooNsConfig brings those workflows into one
 extensible operating system:
 
+- Let Maya answer calls and chats, recognize returning travellers, capture enquiries, search real
+  inventory, arrange callbacks, and keep the CRM updated.
+- Continue the lead journey with scheduled follow-ups across call, email, WhatsApp, and internal
+  tasks, with staff-visible status and history.
+- Turn a destination brief or inspiration photo into an editable day-by-day itinerary and activity
+  collection.
 - Design polished static route maps and cinematic animated journeys.
 - Build packages with day-by-day itineraries, pricing, media, inclusions, and SEO content.
 - Maintain vendor, stay, vehicle, destination, cruise, flight, and experience inventory.
-- Send RFQs, organize supplier outreach, and follow vendor conversations.
+- Let Maya compose detailed RFQs, contact selected suppliers, organize outreach queues, and follow
+  vendor conversations through to reviewed inventory.
+- Keep internal teams and customers connected through realtime chat, attachments, calls, support
+  handover, and Maya-assisted responses.
 - Move leads through quotes, approvals, bookings, payments, invoices, refunds, and support.
 - Operate isolated travel-company workspaces from a multi-tenant SaaS control plane.
 
+## From first enquiry to post-trip
+
+1. **Capture the enquiry.** A traveller can enter through a lead form, customer chat, callback
+   request, or an incoming phone call. Maya can recognize an existing caller, collect trip details,
+   create or update the lead, and escalate urgent or complex requests.
+2. **Discover and curate.** Search packages and live catalogue items, generate an itinerary from a
+   destination brief, or upload an inspiration photo and turn its destination, mood, and activities
+   into a trip blueprint.
+3. **Build the itinerary.** Edit and reorder days, add activities, stays, rooms, cars, and transfers,
+   attach coordinates, calculate pricing and margin, upload media, and generate the route map.
+4. **Request supplier rates.** Select vendors, dates, hotels, and RFQ scope; use a reusable template
+   or ask Maya to compose the request; review it and send it to multiple suppliers.
+5. **Process vendor responses.** Track outbound and inbound threads, synchronize the vendor inbox,
+   extract offered stays, cars, and packages into reviewable drafts, and approve verified inventory.
+6. **Send the proposal.** Build a versioned quote from real catalogue and rate-card data, produce a
+   branded PDF, collect lounge feedback or acceptance, and keep uncertain supplier-rate gaps
+   clearly marked instead of inventing prices.
+7. **Operate the trip.** Manage participants, services, payments, documents, messages, activity
+   status, flight watches, incidents, recovery options, and customer updates from Journey Manager
+   and Traveller Hub.
+8. **Close the loop.** Keep support history, invoices, escrow, refunds, follow-ups, customer value,
+   and post-trip conversations connected to the same traveller record.
+
 ## Feature tour
+
+### Maya: autonomous travel agent with operational guardrails
+
+- Asterisk ARI integration for answering incoming calls, greeting the traveller, listening to each
+  turn, generating spoken replies, and continuing the conversation until hang-up.
+- One shared Maya brain across voice, customer chat, staff chat, WhatsApp, and SMS-backed delivery.
+- Caller recognition, real package and catalogue search, indicative quote lookup, lead capture,
+  WhatsApp trip summaries, callback scheduling, and human escalation.
+- End-of-call CRM journaling with the transcript, actions Maya completed, lead association, and
+  last-contact time; call recordings can be reconciled, listed, streamed, and reviewed.
+- Browser-based staff voice conversations with Maya inside Team Chat.
+- A connected lead and follow-up timeline for calls, WhatsApp, email, quotes, meetings, outcomes,
+  next actions, Maya-owned cadences, and human-owned queues from initial enquiry through conversion.
+- Autonomous handling for open customer-support conversations assigned to Maya, including sensitive
+  data redaction, urgent-travel acknowledgement, on-trip escalation, and a clean human
+  takeover/handover path.
+- Event-driven travel automation, disruption monitoring, refund-SLA review, durable retries,
+  dead-letter handling, and a Maya Ops Center for provider readiness and pending actions.
+- Real commercial boundaries: catalogue reads can run automatically, while external messages,
+  booking changes, money movement, refunds, insurance, EMI, legal claims, and other sensitive
+  actions can require explicit approval and recent MFA.
+- Tenant, channel, and tool-level controls plus `MAYA_EXTERNAL_WRITES_ENABLED` as a deployment kill
+  switch.
+
+### Team chat and customer support
+
+- Realtime staff roster, online presence, typing indicators, unread counts, desktop notifications,
+  delivery/read state, reactions, pinned messages, groups, and chat history.
+- Attachments and peer file transfer, plus WebRTC voice/video calls between team members.
+- Maya appears inside Team Chat as an internal operations agent for verified staff and can also be
+  reached through the in-browser voice interface.
+- Guest and authenticated-customer support chat with request queues, staff acceptance, smart
+  replies, ratings, callbacks, conversation closing, and searchable support history.
+- Hand a customer conversation to Maya when the team is busy, monitor the live reply, and take it
+  back at any time without losing context.
+
+### AI itinerary builder and visual curation
+
+- Generate a day-by-day itinerary from destination, duration, traveller profile, and package brief.
+- Edit, add, remove, and reorder itinerary days; attach descriptions, cities, route locations,
+  coordinates, transfers, time slots, and activities from the master catalogue.
+- Upload an Instagram screenshot, Pinterest-style image, or travel photo to Visual AI; Maya derives
+  the likely destination, travel mood, key activities, and a sample itinerary.
+- Save a photo-generated blueprint directly into the Activities catalogue for reuse in packages.
+- Upload package hero and gallery images, reorder media, animate galleries on storefront cards, and
+  manage published service imagery from the shared Asset Library.
+- Generate SEO titles, descriptions, keywords, pricing estimates, and package architecture when an
+  AI provider is configured.
+
+### RFQs, procurement, and vendor outreach
+
+- Package-level RFQ builder for full itineraries, hotels, transport, and cruises, with one or more
+  scopes in the same request.
+- Required travel dates, destination-aware hotel selection, custom hotel requests, vendor
+  selection, and multi-supplier dispatch.
+- Maya-composed RFQ drafts or reusable email templates populated with package, itinerary, activity,
+  inclusion, exclusion, stay, transfer, and pricing requirements.
+- Preview and edit the subject and message before sending; every successful dispatch is added to
+  the vendor communication history.
+- Category-aware vendor outreach templates, batch queues, retry/error status, and communication
+  timelines.
+- Inbound email synchronization and thread recovery, with AI-assisted extraction of vendor stays,
+  cars, and packages into pending inventory drafts.
+- Human review before extracted supplier inventory is approved and given a selling price or margin.
+- Custom quotes use real active rate cards; missing rates stay indicative and can raise supplier
+  RFQs instead of presenting fabricated availability or pricing.
 
 ### Route maps and animated journeys
 
@@ -45,16 +145,17 @@ extensible operating system:
 - Package directory with regional, seasonal, trending, and text filters.
 - Overview, pricing, builder, itinerary, route, content, media, and SEO workspaces.
 - Day-by-day activities, overnight stops, coordinates, and road/flight/rail/cruise transfers.
+- Destination-aware catalogue loading for vendors, stays, rooms, activities, and cars.
 - B2B cost, B2C selling price, margin planning, inclusions, exclusions, gallery, and hero media.
 - Publish/unpublish controls, public lounge links, RFQs, and supplier association.
-- Optional AI package architect and market estimates when a supported model is configured.
+- Public itinerary feedback and approval through the customer lounge.
 
 ### Vendors and supplier operations
 
 - Searchable supplier directory with category, contact, WhatsApp, coverage, and notes.
-- Vendor outreach campaigns using reusable email templates.
-- RFQ workflows for packages and inventory.
-- Inbox synchronization, threaded supplier conversations, replies, and outreach queues.
+- Supplier association across packages, stays, cars, cruises, experiences, and other inventory.
+- Direct email, WhatsApp, RFQ, and outreach workflows from the supplier workspace.
+- Inbox synchronization, threaded conversations, manual replies, draft review, and outreach queues.
 - Research/source metadata and verification status for operational review.
 
 ### Hotels, stays, and cars
@@ -68,12 +169,20 @@ extensible operating system:
 ### Broader travel operations
 
 - Flights, cruises, destinations, experiences, themes, and catalog management.
-- Leads, follow-ups, client profiles, sales pipeline, journey management, and incident desk.
-- Quotes with reusable PDF templates, approvals, bookings, invoices, escrow, refunds, and promo
-  codes.
+- Leads with ownership, priority analysis, notes, recordings, next actions, follow-up queues, call
+  outcomes, WhatsApp banners, and AI-generated call/email/message scripts.
+- Client profiles, sales pipeline, deal coaching, journey management, global broadcasts, activity
+  status, and an incident desk.
+- Versioned quotes with real catalogue lines, branded PDF templates, approvals, bookings, payment
+  schedules, invoices, escrow, refunds, and promo codes.
+- Traveller Hub for proposals, trips, participants, services, payments, wallet metadata, documents,
+  messages, live status, and Maya SOS/recovery support.
 - Campaigns, audiences, automations, banners, promotions, Travel Hub content, visa content, and
   SEO.
-- Traveller Hub for proposals, trips, participants, services, payments, documents, and messages.
+- AI analytics chat, lead-priority analysis, trend analysis, audience rules, campaign generation,
+  banner copy, escrow reconciliation assistance, and marketing automation drafts.
+- Customer registration and authentication, Google sign-in, email/phone verification, invitations,
+  roles, module permissions, and user administration.
 - Role-based module permissions, audit trails, MFA-sensitive actions, and security controls.
 
 ### Platform and automation
