@@ -96,6 +96,30 @@ git push
 The existing pull request updates automatically. Do not open a replacement pull request for each
 review round.
 
+## Contributor recognition
+
+MooNsConfig recognizes community work across code, tests, documentation, design, accessibility,
+issue research, and roadmap delivery. Recognition is based on accepted work, not the size of the
+change or the contributor's prior experience.
+
+- A first merged pull request earns the **First Flight** badge.
+- Three merged pull requests earn **Route Builder**.
+- Five merged pull requests earn **Navigator**.
+- Ten merged pull requests earn **Pathfinder**.
+- A merged pull request that completes an issue attached to a project milestone earns
+  **Roadmap Champion** recognition.
+- Useful issue reports that are resolved and are not marked duplicate, invalid, or wontfix count
+  toward the community leaderboard.
+
+The [recognition program](docs/community/RECOGNITION.md) contains the complete scoring and
+eligibility rules. The [Hall of Fame](docs/community/HALL_OF_FAME.md) highlights sustained or
+milestone-defining work, and maintainers may issue a
+[repository-verifiable certificate](docs/community/CERTIFICATES.md) for notable contributions.
+
+Recognition does not require repository write access. If something was missed, open a
+[recognition nomination](https://github.com/schowdary75/moonsconfig/issues/new?template=recognition_nomination.yml)
+with links to the relevant issues or pull requests.
+
 ## Code expectations
 
 - Keep TypeScript types explicit at boundaries.

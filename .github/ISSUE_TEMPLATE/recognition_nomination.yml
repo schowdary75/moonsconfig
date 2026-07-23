@@ -1,0 +1,59 @@
+name: Contributor recognition nomination
+description: Nominate a community member for the Hall of Fame, Roadmap Champion, or a certificate.
+title: 'recognition: '
+labels:
+  - documentation
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping us recognize meaningful community work. Self-nominations are welcome. Use only public repository links and do not include private personal information.
+
+  - type: input
+    id: contributor
+    attributes:
+      label: Contributor
+      description: Provide the contributor's public GitHub username.
+      placeholder: '@username'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: recognition
+    attributes:
+      label: Suggested recognition
+      options:
+        - Hall of Fame
+        - Roadmap Champion
+        - Digital certificate
+        - Attribution correction
+        - Other community recognition
+    validations:
+      required: true
+
+  - type: textarea
+    id: contributions
+    attributes:
+      label: Contribution links
+      description: Link the relevant issues, pull requests, discussions, reviews, or documentation.
+      placeholder: |
+        - https://github.com/schowdary75/moonsconfig/pull/123
+        - https://github.com/schowdary75/moonsconfig/issues/456
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Why this work matters
+      description: Explain the practical impact in your own words.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Public-information confirmation
+      options:
+        - label: I included only public repository information and no private personal or customer data.
+          required: true

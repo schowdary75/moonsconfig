@@ -1,0 +1,16 @@
+{
+  "repository": "schowdary75/moonsconfig",
+  "maintainers": [
+    {
+      "login": "schowdary75",
+      "displayName": "MooN",
+      "role": "Founder and lead maintainer"
+    }
+  ],
+  "scoreWeights": {
+    "mergedPullRequest": 10,
+    "roadmapCompletion": 5,
+    "acceptedIssue": 3,
+    "defaultBranchCommit": 1
+  }
+}
