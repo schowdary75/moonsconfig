@@ -7,6 +7,9 @@
 [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![Security Policy](https://img.shields.io/badge/security-policy-2ea44f?style=flat-square&logo=github)](SECURITY.md)
 [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-6f42c1?style=flat-square)](CONTRIBUTING.md)
+[![GitHub Stars](https://img.shields.io/github/stars/schowdary75/moonsconfig?style=flat-square&logo=github)](https://github.com/schowdary75/moonsconfig)
+[![GitHub Forks](https://img.shields.io/github/forks/schowdary75/moonsconfig?style=flat-square&logo=github)](https://github.com/schowdary75/moonsconfig/forks)
+[![GitHub Contributors](https://img.shields.io/github/contributors/schowdary75/moonsconfig?style=flat-square&logo=github)](https://github.com/schowdary75/moonsconfig/graphs/contributors)
 
 An open, AI-assisted travel operating system for running the complete traveller journey—from the
 first call or chat through itinerary curation, supplier pricing, proposals, booking, on-trip
