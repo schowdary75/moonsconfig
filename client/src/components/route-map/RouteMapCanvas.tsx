@@ -26,7 +26,16 @@ import {
 } from './routeMapUtils';
 import { RouteLegend } from './RouteLegend';
 import { MIN_TRANSPORT_ICON_PATH_LENGTH, TransportRouteIcon } from './TransportRouteIcon';
-import { getRouteMapTouchAction } from './routeMapInteraction';
+import {
+  getRouteMapKeyboardCommand,
+  getRouteMapTouchAction,
+  panRouteMapGeoView,
+  panRouteMapViewBox,
+  resetRouteMapViewBox,
+  zoomRouteMapGeoView,
+  zoomRouteMapViewBox,
+  type RouteMapGeoView,
+} from './routeMapInteraction';
 
 interface RouteMapCanvasProps {
   config: MapConfig;
@@ -101,7 +110,8 @@ export function RouteMapCanvas({
 }: RouteMapCanvasProps) {
   const { width, height, mapArea, backgroundImage } = config;
   const svgRef = React.useRef<SVGSVGElement | null>(null);
-  const [viewBox, setViewBox] = React.useState({ x: 0, y: 0, width, height });
+  const instructionsId = React.useId();
+  const [viewBox, setViewBox] = React.useState(() => resetRouteMapViewBox(width, height));
   const [isPanning, setIsPanning] = React.useState(false);
   // Active waypoint drag: which segment + waypoint index is being moved.
   const [draggingWp, setDraggingWp] = React.useState<{ segId: string; index: number } | null>(null);
@@ -110,11 +120,7 @@ export function RouteMapCanvas({
   // and lines), we raise the projection scale and re-render the map at the new
   // zoom level. `null` = whole map. Bitmap/calibrated maps can't reproject, so
   // they fall back to the old viewBox zoom.
-  interface GeoView {
-    scale: number;
-    translate: [number, number];
-  }
-  const [geoView, setGeoView] = React.useState<GeoView | null>(null);
+  const [geoView, setGeoView] = React.useState<RouteMapGeoView | null>(null);
   // Live pixel offset while dragging; committed into geoView on release so the
   // expensive re-projection happens once instead of on every mousemove.
   const [panOffset, setPanOffset] = React.useState<[number, number] | null>(null);
@@ -136,11 +142,11 @@ export function RouteMapCanvas({
     clientX: number;
     clientY: number;
     viewBox: typeof viewBox;
-    geoView: GeoView | null;
+    geoView: RouteMapGeoView | null;
   } | null>(null);
 
   React.useEffect(() => {
-    setViewBox({ x: 0, y: 0, width, height });
+    setViewBox(resetRouteMapViewBox(width, height));
     setGeoView(null);
   }, [config.id, config.bounds, height, width]);
 
@@ -149,38 +155,23 @@ export function RouteMapCanvas({
     (fx: number, fy: number, factor: number) => {
       const base = geoRef.current;
       if (base.canGeoZoom) {
-        const px = fx * width;
-        const py = fy * height;
         setGeoView((current) => {
           const cur = current ?? { scale: base.scale, translate: base.translate };
-          const nextScale = Math.min(
-            base.scale * MAX_GEO_ZOOM,
-            Math.max(base.scale, cur.scale * factor),
+          return zoomRouteMapGeoView(
+            cur,
+            { scale: base.scale, translate: base.translate },
+            width,
+            height,
+            factor,
+            fx,
+            fy,
+            MAX_GEO_ZOOM,
           );
-          if (nextScale <= base.scale) return null;
-          const ratio = nextScale / cur.scale;
-          return {
-            scale: nextScale,
-            translate: [px - (px - cur.translate[0]) * ratio, py - (py - cur.translate[1]) * ratio],
-          };
         });
         return;
       }
 
-      setViewBox((current) => {
-        const pointerX = current.x + fx * current.width;
-        const pointerY = current.y + fy * current.height;
-        const nextWidth = Math.min(width, Math.max(width / 64, current.width / factor));
-        const nextHeight = Math.min(height, Math.max(height / 64, current.height / factor));
-        const nextX = pointerX - (pointerX - current.x) * (nextWidth / current.width);
-        const nextY = pointerY - (pointerY - current.y) * (nextHeight / current.height);
-        return {
-          x: Math.min(width - nextWidth, Math.max(0, nextX)),
-          y: Math.min(height - nextHeight, Math.max(0, nextY)),
-          width: nextWidth,
-          height: nextHeight,
-        };
-      });
+      setViewBox((current) => zoomRouteMapViewBox(current, width, height, factor, fx, fy));
     },
     [height, width],
   );
@@ -670,17 +661,31 @@ export function RouteMapCanvas({
       // commit it into the projection translate on release.
       const dx = ((event.clientX - start.clientX) / rect.width) * width;
       const dy = ((event.clientY - start.clientY) / rect.height) * height;
-      setPanOffset([dx, dy]);
+      const next = panRouteMapGeoView(
+        start.geoView!,
+        {
+          scale: geoRef.current.scale,
+          translate: geoRef.current.translate,
+        },
+        width,
+        height,
+        dx,
+        dy,
+      );
+      setPanOffset(
+        next
+          ? [
+              next.translate[0] - start.geoView!.translate[0],
+              next.translate[1] - start.geoView!.translate[1],
+            ]
+          : [0, 0],
+      );
       return;
     }
 
     const dx = ((event.clientX - start.clientX) / rect.width) * start.viewBox.width;
     const dy = ((event.clientY - start.clientY) / rect.height) * start.viewBox.height;
-    setViewBox({
-      ...start.viewBox,
-      x: Math.min(width - start.viewBox.width, Math.max(0, start.viewBox.x - dx)),
-      y: Math.min(height - start.viewBox.height, Math.max(0, start.viewBox.y - dy)),
-    });
+    setViewBox(panRouteMapViewBox(start.viewBox, width, height, -dx, -dy));
   };
 
   const stopPanning = (event: React.PointerEvent<SVGSVGElement>) => {
@@ -709,10 +714,59 @@ export function RouteMapCanvas({
   };
 
   const resetManualZoom = () => {
-    setViewBox({ x: 0, y: 0, width, height });
+    setViewBox(resetRouteMapViewBox(width, height));
     setGeoView(null);
   };
   const isZoomed = geoView !== null || viewBox.width !== width || viewBox.height !== height;
+
+  const handleKeyDown = (event: React.KeyboardEvent<SVGSVGElement>) => {
+    const command = getRouteMapKeyboardCommand(event.key);
+    if (!command) return;
+    if (command.type !== 'zoom-in' && !isZoomed) return;
+
+    event.preventDefault();
+    if (command.type === 'zoom-in') {
+      applyZoom(0.5, 0.5, 1.5);
+      return;
+    }
+    if (command.type === 'zoom-out') {
+      applyZoom(0.5, 0.5, 1 / 1.5);
+      return;
+    }
+    if (command.type === 'reset') {
+      resetManualZoom();
+      return;
+    }
+
+    if (geoRef.current.canGeoZoom) {
+      const step = Math.max(24, Math.min(width, height) * 0.08);
+      setGeoView((current) => {
+        if (!current) return null;
+        return panRouteMapGeoView(
+          current,
+          {
+            scale: geoRef.current.scale,
+            translate: geoRef.current.translate,
+          },
+          width,
+          height,
+          -command.x * step,
+          -command.y * step,
+        );
+      });
+      return;
+    }
+
+    setViewBox((current) =>
+      panRouteMapViewBox(
+        current,
+        width,
+        height,
+        command.x * current.width * 0.1,
+        command.y * current.height * 0.1,
+      ),
+    );
+  };
 
   // legend position: bottom-left
   const legendRows = ['land', 'flight', 'cruise', 'rail'].filter((m) =>
@@ -769,18 +823,28 @@ export function RouteMapCanvas({
         </button>
       </div>
 
+      <p id={instructionsId} data-export-exclude="true" className="sr-only">
+        Interactive route map. Use plus or equals to zoom in, minus to zoom out, arrow keys to pan,
+        and Home or zero to reset.
+      </p>
+
       {/* All map layers share one SVG; zoom re-projects the geography so detail
           stays sharp and labels keep their screen size. */}
       <svg
         ref={svgRef}
+        role="application"
+        tabIndex={0}
         viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
         onClick={handleClick}
         onDoubleClick={resetManualZoom}
+        onKeyDown={handleKeyDown}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={stopPanning}
         onPointerCancel={stopPanning}
-        aria-label={`${config.countryName} route map. Scroll for continuous zoom, drag to pan, and double-click to reset.`}
+        aria-label={`${config.countryName} interactive route map`}
+        aria-describedby={instructionsId}
+        className="focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-sky-700"
         style={{
           position: 'absolute',
           inset: 0,
