@@ -449,6 +449,28 @@ npm run dev
 The Vite application runs at <http://localhost:5174> and proxies `/api`, `/uploads`, and
 `/socket.io` to the API at <http://localhost:4000>.
 
+### Diagnose local setup
+
+Run the read-only doctor before starting the application:
+
+```bash
+npm run doctor
+```
+
+That checks the native-development path by default. For the Docker path, run:
+
+```bash
+npm run doctor -- --docker
+```
+
+The report uses `PASS`, `WARN`, and `FAIL`. Exit code `0` means no blockers were found, exit code
+`1` means at least one required check failed, and exit code `2` means the command-line options were
+invalid. Optional provider warnings do not change the exit code.
+
+The doctor does not install software, rewrite files, start containers, run migrations, seed data,
+or contact provider services. It checks only environment key names and never prints environment
+values.
+
 ## Environment configuration
 
 Use `.env.example` as the source of truth. Real `.env` files are ignored at the root and inside
@@ -496,6 +518,8 @@ assets and are public by design.
 | `./start.sh`                     | Install, configure, start, initialize, and follow the Docker stack |
 | `./stop.sh`                      | Stop the Docker stack without deleting local data                  |
 | `npm run setup:env`              | Create an ignored local `.env` with generated development secrets  |
+| `npm run doctor`                 | Diagnose native prerequisites without changing the machine         |
+| `npm run doctor -- --docker`     | Diagnose Docker prerequisites without starting containers          |
 | `npm run dev:app`                | Run client and API with hot reload                                 |
 | `npm run dev`                    | Run client, API, and worker                                        |
 | `npm run build`                  | Build all workspaces                                               |
