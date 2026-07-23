@@ -62,11 +62,13 @@ interface RouteStopEditorProps {
 function GeocodeInput({
   value,
   countryName,
+  inputLabel,
   onChangeName,
   onPick,
 }: {
   value: string;
   countryName?: string;
+  inputLabel: string;
   onChangeName: (name: string) => void;
   onPick: (name: string, lat: number, lng: number) => void;
 }) {
@@ -115,6 +117,7 @@ function GeocodeInput({
       <div className="relative">
         <Input
           value={value}
+          aria-label={inputLabel}
           onChange={(e) => {
             onChangeName(e.target.value);
             runSearch(e.target.value);
@@ -161,6 +164,22 @@ const MODE_ICON: Record<TransportMode, React.ElementType> = {
   cruise: Ship,
   rail: TrainFront,
 };
+
+function stopAccessibleName(stop: RouteStop, index: number): string {
+  const name = stop.name.trim();
+  return name ? `stop ${index + 1}, ${name}` : `stop ${index + 1}`;
+}
+
+function stopFieldId(stop: RouteStop, field: string): string {
+  const safeStopId = stop.id.replace(/[^A-Za-z0-9_-]/g, '-');
+  return `route-stop-${safeStopId}-${field}`;
+}
+
+function curveValueText(curve: number): string {
+  if (Math.abs(curve) < 0.001) return 'Straight';
+  const direction = curve < 0 ? 'left' : 'right';
+  return `${Math.round(Math.abs(curve) * 100)} percent ${direction} curve`;
+}
 
 function EndpointModeSelector({
   label,
@@ -340,6 +359,9 @@ export function RouteStopEditor({
             const lngOk = validateLng(stop.lng);
             const segment = segments[index]; // link from this stop to next
             const next = stops[index + 1];
+            const accessibleStopName = stopAccessibleName(stop, index);
+            const latitudeErrorId = stopFieldId(stop, 'latitude-error');
+            const longitudeErrorId = stopFieldId(stop, 'longitude-error');
             const legKm =
               segment && next && latOk && lngOk && validateLat(next.lat) && validateLng(next.lng)
                 ? haversineKm(stop.lat, stop.lng, next.lat, next.lng)
@@ -359,6 +381,7 @@ export function RouteStopEditor({
                       <GeocodeInput
                         value={stop.name}
                         countryName={countryName}
+                        inputLabel={`Location name for ${accessibleStopName}`}
                         onChangeName={(name) => updateStop(stop.id, { name })}
                         onPick={(name, lat, lng) => updateStop(stop.id, { name, lat, lng })}
                       />
@@ -368,7 +391,7 @@ export function RouteStopEditor({
                           className="text-muted-foreground hover:text-foreground disabled:opacity-30"
                           onClick={() => moveStop(index, -1)}
                           disabled={index === 0}
-                          aria-label="Move up"
+                          aria-label={`Move ${accessibleStopName} up`}
                         >
                           <ChevronUp className="h-3.5 w-3.5" />
                         </button>
@@ -377,7 +400,7 @@ export function RouteStopEditor({
                           className="text-muted-foreground hover:text-foreground disabled:opacity-30"
                           onClick={() => moveStop(index, 1)}
                           disabled={index === stops.length - 1}
-                          aria-label="Move down"
+                          aria-label={`Move ${accessibleStopName} down`}
                         >
                           <ChevronDown className="h-3.5 w-3.5" />
                         </button>
@@ -386,7 +409,7 @@ export function RouteStopEditor({
                         type="button"
                         className="shrink-0 text-muted-foreground hover:text-destructive"
                         onClick={() => removeStop(stop.id)}
-                        aria-label="Remove stop"
+                        aria-label={`Remove ${accessibleStopName}`}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -398,23 +421,43 @@ export function RouteStopEditor({
                           type="number"
                           step="0.001"
                           value={Number.isFinite(stop.lat) ? stop.lat : ''}
+                          aria-label={`Latitude for ${accessibleStopName}`}
+                          aria-invalid={!latOk}
+                          aria-describedby={!latOk ? latitudeErrorId : undefined}
                           onChange={(e) => updateStop(stop.id, { lat: parseFloat(e.target.value) })}
                           placeholder="Latitude"
                           className={`h-7 text-xs ${latOk ? '' : 'border-destructive focus-visible:ring-destructive'}`}
                         />
-                        {!latOk && <p className="mt-0.5 text-[10px] text-destructive">-90 to 90</p>}
+                        {!latOk && (
+                          <p
+                            id={latitudeErrorId}
+                            role="alert"
+                            className="mt-0.5 text-[10px] text-destructive"
+                          >
+                            Latitude must be between -90 and 90
+                          </p>
+                        )}
                       </div>
                       <div>
                         <Input
                           type="number"
                           step="0.001"
                           value={Number.isFinite(stop.lng) ? stop.lng : ''}
+                          aria-label={`Longitude for ${accessibleStopName}`}
+                          aria-invalid={!lngOk}
+                          aria-describedby={!lngOk ? longitudeErrorId : undefined}
                           onChange={(e) => updateStop(stop.id, { lng: parseFloat(e.target.value) })}
                           placeholder="Longitude"
                           className={`h-7 text-xs ${lngOk ? '' : 'border-destructive focus-visible:ring-destructive'}`}
                         />
                         {!lngOk && (
-                          <p className="mt-0.5 text-[10px] text-destructive">-180 to 180</p>
+                          <p
+                            id={longitudeErrorId}
+                            role="alert"
+                            className="mt-0.5 text-[10px] text-destructive"
+                          >
+                            Longitude must be between -180 and 180
+                          </p>
                         )}
                       </div>
                     </div>
@@ -426,7 +469,10 @@ export function RouteStopEditor({
                           updateStop(stop.id, { labelPosition: v as LabelPosition })
                         }
                       >
-                        <SelectTrigger className="h-7 text-xs">
+                        <SelectTrigger
+                          aria-label={`Label position for ${accessibleStopName}`}
+                          className="h-7 text-xs"
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -441,6 +487,7 @@ export function RouteStopEditor({
                       </Select>
                       <Input
                         value={stop.label ?? ''}
+                        aria-label={`Custom label for ${accessibleStopName}`}
                         onChange={(e) => updateStop(stop.id, { label: e.target.value })}
                         placeholder="Custom label"
                         className="h-7 text-xs"
@@ -465,7 +512,7 @@ export function RouteStopEditor({
                           <ToggleGroupItem
                             key={mode}
                             value={mode}
-                            aria-label={mode}
+                            aria-label={`${ROUTE_STYLES[mode].label.toLowerCase()} route from ${stop.name || `stop ${index + 1}`} to ${next?.name || `stop ${index + 2}`}`}
                             title={ROUTE_STYLES[mode].label}
                             className="h-7 w-8 rounded-md border border-border p-0 data-[state=on]:border-transparent"
                             style={
@@ -491,8 +538,10 @@ export function RouteStopEditor({
                         max={0.8}
                         step={0.05}
                         value={segment.curve ?? 0.25}
+                        aria-label={`Curve for route from ${stop.name || `stop ${index + 1}`} to ${next?.name || `stop ${index + 2}`}`}
+                        aria-valuetext={curveValueText(segment.curve ?? 0.25)}
                         onChange={(e) => setSegmentCurve(segment.id, parseFloat(e.target.value))}
-                        className="h-1 w-14 cursor-pointer accent-primary"
+                        className="h-1 w-14 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       />
                     </div>
 
