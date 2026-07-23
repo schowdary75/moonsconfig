@@ -704,21 +704,193 @@ export function serializeRoute(doc: RouteDocument): string {
   return JSON.stringify(doc, null, 2);
 }
 
-export function parseRouteDocument(raw: string): RouteDocument {
-  const parsed = JSON.parse(raw) as RouteDocument;
-  if (!parsed || !Array.isArray(parsed.stops) || !Array.isArray(parsed.segments)) {
-    throw new Error('Invalid route JSON: expected { stops: [], segments: [] }.');
+export const MAX_ROUTE_DOCUMENT_BYTES = 1_000_000;
+
+const ROUTE_DOCUMENT_LIMITS = {
+  stops: 500,
+  segments: 500,
+  waypointsPerSegment: 100,
+  idLength: 100,
+  textLength: 200,
+} as const;
+
+const TRANSPORT_MODES = new Set(['flight', 'land', 'cruise', 'rail']);
+const ENDPOINT_MODES = new Set([...TRANSPORT_MODES, 'none']);
+const LABEL_POSITIONS = new Set(['auto', 'top', 'bottom', 'left', 'right']);
+
+function routeDocumentError(message: string): never {
+  throw new Error(`Invalid route JSON: ${message}`);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readBoundedString(
+  value: unknown,
+  field: string,
+  options: { required?: boolean; maxLength?: number } = {},
+): string | undefined {
+  if (value === undefined && !options.required) return undefined;
+  if (typeof value !== 'string') routeDocumentError(`${field} must be a string.`);
+  const trimmed = value.trim();
+  if (options.required && !trimmed) routeDocumentError(`${field} is required.`);
+  if (value.length > (options.maxLength ?? ROUTE_DOCUMENT_LIMITS.textLength)) {
+    routeDocumentError(`${field} is too long.`);
   }
+  return value;
+}
+
+function readId(value: unknown, field: string): string {
+  const id = readBoundedString(value, field, {
+    required: true,
+    maxLength: ROUTE_DOCUMENT_LIMITS.idLength,
+  });
+  if (!id || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(id)) {
+    routeDocumentError(`${field} contains unsupported characters.`);
+  }
+  return id;
+}
+
+export function parseRouteDocument(raw: string): RouteDocument {
+  if (new TextEncoder().encode(raw).byteLength > MAX_ROUTE_DOCUMENT_BYTES) {
+    routeDocumentError('file exceeds the 1 MB limit.');
+  }
+
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    routeDocumentError('the file is not valid JSON.');
+  }
+  if (!isRecord(value)) routeDocumentError('expected a JSON object.');
+  if (value.version !== 1) {
+    routeDocumentError(`unsupported version ${String(value.version)}; expected version 1.`);
+  }
+
+  const mapConfigId = readId(value.mapConfigId, 'mapConfigId');
+  if (!Array.isArray(value.stops)) routeDocumentError('stops must be an array.');
+  if (!Array.isArray(value.segments)) routeDocumentError('segments must be an array.');
+  if (value.stops.length > ROUTE_DOCUMENT_LIMITS.stops) {
+    routeDocumentError(`stops cannot exceed ${ROUTE_DOCUMENT_LIMITS.stops} entries.`);
+  }
+  if (value.segments.length > ROUTE_DOCUMENT_LIMITS.segments) {
+    routeDocumentError(`segments cannot exceed ${ROUTE_DOCUMENT_LIMITS.segments} entries.`);
+  }
+
+  const stopIds = new Set<string>();
+  const stops = value.stops.map((candidate, index): RouteStop => {
+    const field = `stops[${index}]`;
+    if (!isRecord(candidate)) routeDocumentError(`${field} must be an object.`);
+    const id = readId(candidate.id, `${field}.id`);
+    if (stopIds.has(id)) routeDocumentError(`${field}.id duplicates stop ID "${id}".`);
+    stopIds.add(id);
+    const name = readBoundedString(candidate.name, `${field}.name`, { required: true });
+    if (typeof candidate.lat !== 'number' || !validateLat(candidate.lat)) {
+      routeDocumentError(`${field}.lat must be a finite number between -90 and 90.`);
+    }
+    if (typeof candidate.lng !== 'number' || !validateLng(candidate.lng)) {
+      routeDocumentError(`${field}.lng must be a finite number between -180 and 180.`);
+    }
+    const label = readBoundedString(candidate.label, `${field}.label`);
+    if (
+      candidate.labelPosition !== undefined &&
+      (typeof candidate.labelPosition !== 'string' || !LABEL_POSITIONS.has(candidate.labelPosition))
+    ) {
+      routeDocumentError(`${field}.labelPosition is not supported.`);
+    }
+    return {
+      id,
+      name: name!,
+      lat: candidate.lat,
+      lng: candidate.lng,
+      ...(label === undefined ? {} : { label }),
+      ...(candidate.labelPosition === undefined
+        ? {}
+        : { labelPosition: candidate.labelPosition as RouteStop['labelPosition'] }),
+    };
+  });
+
+  const segmentIds = new Set<string>();
+  const segments = value.segments.map((candidate, index): RouteSegment => {
+    const field = `segments[${index}]`;
+    if (!isRecord(candidate)) routeDocumentError(`${field} must be an object.`);
+    const id = readId(candidate.id, `${field}.id`);
+    if (segmentIds.has(id)) routeDocumentError(`${field}.id duplicates segment ID "${id}".`);
+    segmentIds.add(id);
+    const fromStopId = readId(candidate.fromStopId, `${field}.fromStopId`);
+    const toStopId = readId(candidate.toStopId, `${field}.toStopId`);
+    if (!stopIds.has(fromStopId) || !stopIds.has(toStopId)) {
+      routeDocumentError(`${field} references a stop that does not exist.`);
+    }
+    if (fromStopId === toStopId) {
+      routeDocumentError(`${field} cannot reference the same start and end stop.`);
+    }
+    if (typeof candidate.mode !== 'string' || !TRANSPORT_MODES.has(candidate.mode)) {
+      routeDocumentError(`${field}.mode is not supported.`);
+    }
+    if (
+      candidate.curve !== undefined &&
+      (typeof candidate.curve !== 'number' ||
+        !Number.isFinite(candidate.curve) ||
+        candidate.curve < -1 ||
+        candidate.curve > 1)
+    ) {
+      routeDocumentError(`${field}.curve must be a finite number between -1 and 1.`);
+    }
+    if (candidate.waypoints !== undefined && !Array.isArray(candidate.waypoints)) {
+      routeDocumentError(`${field}.waypoints must be an array.`);
+    }
+    if (
+      Array.isArray(candidate.waypoints) &&
+      candidate.waypoints.length > ROUTE_DOCUMENT_LIMITS.waypointsPerSegment
+    ) {
+      routeDocumentError(
+        `${field}.waypoints cannot exceed ${ROUTE_DOCUMENT_LIMITS.waypointsPerSegment} entries.`,
+      );
+    }
+    const waypoints = Array.isArray(candidate.waypoints)
+      ? candidate.waypoints.map((waypoint, waypointIndex) => {
+          const waypointField = `${field}.waypoints[${waypointIndex}]`;
+          if (!isRecord(waypoint)) routeDocumentError(`${waypointField} must be an object.`);
+          if (typeof waypoint.lat !== 'number' || !validateLat(waypoint.lat)) {
+            routeDocumentError(`${waypointField}.lat must be between -90 and 90.`);
+          }
+          if (typeof waypoint.lng !== 'number' || !validateLng(waypoint.lng)) {
+            routeDocumentError(`${waypointField}.lng must be between -180 and 180.`);
+          }
+          return { lat: waypoint.lat, lng: waypoint.lng };
+        })
+      : undefined;
+    return {
+      id,
+      fromStopId,
+      toStopId,
+      mode: candidate.mode as RouteSegment['mode'],
+      ...(candidate.curve === undefined ? {} : { curve: candidate.curve }),
+      ...(waypoints === undefined ? {} : { waypoints }),
+    };
+  });
+
+  const readEndpointMode = (candidate: unknown, field: string): RouteDocument['arrivalMode'] => {
+    if (typeof candidate !== 'string' || !ENDPOINT_MODES.has(candidate)) {
+      routeDocumentError(`${field} is not supported.`);
+    }
+    return candidate as RouteDocument['arrivalMode'];
+  };
+
   return {
     version: 1,
-    mapConfigId: parsed.mapConfigId ?? 'world',
-    stops: parsed.stops,
-    segments: parsed.segments,
-    arrivalMode: ['flight', 'land', 'cruise', 'rail', 'none'].includes(parsed.arrivalMode || '')
-      ? parsed.arrivalMode
-      : 'flight',
-    departureMode: ['flight', 'land', 'cruise', 'rail', 'none'].includes(parsed.departureMode || '')
-      ? parsed.departureMode
-      : 'flight',
+    mapConfigId,
+    stops,
+    segments,
+    arrivalMode:
+      value.arrivalMode === undefined
+        ? 'flight'
+        : readEndpointMode(value.arrivalMode, 'arrivalMode'),
+    departureMode:
+      value.departureMode === undefined
+        ? 'flight'
+        : readEndpointMode(value.departureMode, 'departureMode'),
   };
 }

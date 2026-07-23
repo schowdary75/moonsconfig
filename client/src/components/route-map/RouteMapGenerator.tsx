@@ -68,6 +68,7 @@ import {
   rebuildLinearChain,
   serializeRoute,
   parseRouteDocument,
+  MAX_ROUTE_DOCUMENT_BYTES,
   totalRouteKm,
   fetchOsrmRoute,
 } from './routeMapUtils';
@@ -284,6 +285,7 @@ export function RouteMapGenerator() {
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const bgInputRef = useRef<HTMLInputElement | null>(null);
+  const routeJsonInputRef = useRef<HTMLInputElement | null>(null);
 
   // ── resolve the active config ──
   const config = useMemo<MapConfig>(() => {
@@ -537,6 +539,55 @@ export function RouteMapGenerator() {
     toast.success('Route cleared.');
   };
 
+  const routeJsonFilename = () => {
+    const countrySlug = config.countryName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    return `route-map-${countrySlug || 'journey'}.json`;
+  };
+
+  const exportRouteJson = () => {
+    const blob = new Blob([serializeRoute(doc)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = routeJsonFilename();
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success('Route JSON exported.');
+  };
+
+  const importRouteJson = async (file: File | null) => {
+    if (!file) return;
+    try {
+      if (file.size > MAX_ROUTE_DOCUMENT_BYTES) {
+        throw new Error('The selected file exceeds the 1 MB route-document limit.');
+      }
+      const parsed = parseRouteDocument(await file.text());
+      const importedConfig = resolveConfigById(parsed.mapConfigId, customConfigs);
+      if (!importedConfig) {
+        throw new Error(
+          `Map "${parsed.mapConfigId}" is not available. Import or select that map first.`,
+        );
+      }
+
+      setSelectedId(importedConfig.id);
+      setSelectedSavedId('');
+      setStops(parsed.stops);
+      setSegments(parsed.segments);
+      setArrivalMode(parsed.arrivalMode ?? 'flight');
+      setDepartureMode(parsed.departureMode ?? 'flight');
+      setOsrmCache({});
+      setAutoZoom(false);
+      toast.success(`Imported ${parsed.stops.length} route stop(s).`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not import the route JSON.');
+    } finally {
+      if (routeJsonInputRef.current) routeJsonInputRef.current.value = '';
+    }
+  };
+
   // ── export ──
   const download = (dataUrl: string, ext: string) => {
     const link = document.createElement('a');
@@ -783,6 +834,26 @@ export function RouteMapGenerator() {
             title="Drag handles on the map to shape each leg; click + to add a waypoint, double-click a handle to remove it"
           >
             <Spline className="mr-2 h-4 w-4" /> {editPath ? 'Cancel Edit' : 'Edit Path'}
+          </Button>
+
+          <input
+            ref={routeJsonInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="sr-only"
+            aria-label="Choose route JSON to import"
+            onChange={(event) => void importRouteJson(event.target.files?.[0] ?? null)}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            title="Import a version 1 route JSON file (maximum 1 MB)"
+            onClick={() => routeJsonInputRef.current?.click()}
+          >
+            <Upload className="mr-2 h-4 w-4" /> Import JSON
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportRouteJson}>
+            <Download className="mr-2 h-4 w-4" /> Export JSON
           </Button>
 
           <Button

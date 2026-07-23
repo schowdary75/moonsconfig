@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { RouteSegment, RouteStop } from './routeMapTypes';
+import type { RouteDocument, RouteSegment, RouteStop } from './routeMapTypes';
 import {
   haversineKm,
+  MAX_ROUTE_DOCUMENT_BYTES,
+  parseRouteDocument,
   rebuildLinearChain,
+  serializeRoute,
   totalRouteKm,
   validateLat,
   validateLng,
@@ -151,5 +154,132 @@ describe('rebuildLinearChain', () => {
     ]);
     expect(rebuilt[0].id).toMatch(/^seg_/);
     expect(rebuilt[1].id).toMatch(/^seg_/);
+  });
+});
+
+describe('route JSON documents', () => {
+  function validDocument(): RouteDocument {
+    return {
+      version: 1,
+      mapConfigId: 'world',
+      stops: [
+        { id: 'a', name: 'Alpha', lat: 10, lng: 20, label: 'Start', labelPosition: 'left' },
+        { id: 'b', name: 'Beta', lat: 30, lng: 40 },
+      ],
+      segments: [
+        {
+          id: 'a-b',
+          fromStopId: 'a',
+          toStopId: 'b',
+          mode: 'flight',
+          curve: 0.4,
+          waypoints: [{ lat: 20, lng: 30 }],
+        },
+      ],
+      arrivalMode: 'rail',
+      departureMode: 'none',
+    };
+  }
+
+  function cloneDocument(): Record<string, unknown> {
+    return JSON.parse(JSON.stringify(validDocument())) as Record<string, unknown>;
+  }
+
+  it('round-trips a complete version 1 document', () => {
+    const document = validDocument();
+
+    expect(parseRouteDocument(serializeRoute(document))).toEqual(document);
+  });
+
+  it('rejects malformed JSON and oversized files', () => {
+    expect(() => parseRouteDocument('{broken')).toThrow(/not valid JSON/);
+    expect(() => parseRouteDocument(' '.repeat(MAX_ROUTE_DOCUMENT_BYTES + 1))).toThrow(
+      /exceeds the 1 MB limit/,
+    );
+  });
+
+  it('rejects unsupported versions and invalid map IDs', () => {
+    expect(() => parseRouteDocument(JSON.stringify({ ...validDocument(), version: 2 }))).toThrow(
+      /unsupported version 2/,
+    );
+    expect(() =>
+      parseRouteDocument(JSON.stringify({ ...validDocument(), mapConfigId: '../private' })),
+    ).toThrow(/mapConfigId contains unsupported characters/);
+  });
+
+  it('rejects duplicate stop IDs, blank names, invalid coordinates, and invalid labels', () => {
+    const duplicate = cloneDocument();
+    duplicate.stops = [
+      { id: 'same', name: 'Alpha', lat: 0, lng: 0 },
+      { id: 'same', name: 'Beta', lat: 1, lng: 1 },
+    ];
+    expect(() => parseRouteDocument(JSON.stringify(duplicate))).toThrow(/duplicates stop ID/);
+
+    const blankName = cloneDocument();
+    (blankName.stops as Array<Record<string, unknown>>)[0].name = '   ';
+    expect(() => parseRouteDocument(JSON.stringify(blankName))).toThrow(/name is required/);
+
+    const invalidCoordinates = cloneDocument();
+    (invalidCoordinates.stops as Array<Record<string, unknown>>)[0].lat = 91;
+    expect(() => parseRouteDocument(JSON.stringify(invalidCoordinates))).toThrow(
+      /lat must be a finite number between -90 and 90/,
+    );
+
+    const invalidLabel = cloneDocument();
+    (invalidLabel.stops as Array<Record<string, unknown>>)[0].labelPosition = 'diagonal';
+    expect(() => parseRouteDocument(JSON.stringify(invalidLabel))).toThrow(
+      /labelPosition is not supported/,
+    );
+  });
+
+  it('rejects duplicate segment IDs, dangling references, self-links, modes, and curves', () => {
+    const duplicate = cloneDocument();
+    duplicate.segments = [
+      ...(duplicate.segments as Array<Record<string, unknown>>),
+      {
+        id: 'a-b',
+        fromStopId: 'b',
+        toStopId: 'a',
+        mode: 'land',
+      },
+    ];
+    expect(() => parseRouteDocument(JSON.stringify(duplicate))).toThrow(/duplicates segment ID/);
+
+    const dangling = cloneDocument();
+    (dangling.segments as Array<Record<string, unknown>>)[0].toStopId = 'missing';
+    expect(() => parseRouteDocument(JSON.stringify(dangling))).toThrow(
+      /references a stop that does not exist/,
+    );
+
+    const selfLink = cloneDocument();
+    (selfLink.segments as Array<Record<string, unknown>>)[0].toStopId = 'a';
+    expect(() => parseRouteDocument(JSON.stringify(selfLink))).toThrow(/same start and end stop/);
+
+    const invalidMode = cloneDocument();
+    (invalidMode.segments as Array<Record<string, unknown>>)[0].mode = 'teleport';
+    expect(() => parseRouteDocument(JSON.stringify(invalidMode))).toThrow(/mode is not supported/);
+
+    const invalidCurve = cloneDocument();
+    (invalidCurve.segments as Array<Record<string, unknown>>)[0].curve = 1.5;
+    expect(() => parseRouteDocument(JSON.stringify(invalidCurve))).toThrow(
+      /curve must be a finite number between -1 and 1/,
+    );
+  });
+
+  it('rejects malformed waypoints and endpoint modes', () => {
+    const invalidWaypoint = cloneDocument();
+    (invalidWaypoint.segments as Array<Record<string, unknown>>)[0].waypoints = [
+      { lat: 0, lng: 181 },
+    ];
+    expect(() => parseRouteDocument(JSON.stringify(invalidWaypoint))).toThrow(
+      /waypoints\[0\]\.lng must be between -180 and 180/,
+    );
+
+    expect(() =>
+      parseRouteDocument(JSON.stringify({ ...validDocument(), arrivalMode: 'teleport' })),
+    ).toThrow(/arrivalMode is not supported/);
+    expect(() =>
+      parseRouteDocument(JSON.stringify({ ...validDocument(), departureMode: 'teleport' })),
+    ).toThrow(/departureMode is not supported/);
   });
 });
