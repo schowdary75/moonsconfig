@@ -1,0 +1,153 @@
+name: moonsconfig
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${DATABASE_NAME:-moonsconfig}
+      MYSQL_USER: ${DATABASE_USER:-moon_user}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD:-change-me}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change-root-password}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./server/mysql-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'mysqladmin',
+          'ping',
+          '-h',
+          'localhost',
+          '-u',
+          'root',
+          '-p${MYSQL_ROOT_PASSWORD:-change-root-password}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    command: redis-server --appendonly yes --maxmemory-policy noeviction
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    environment: &server-env
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: mysql://${DATABASE_USER:-moon_user}:${DATABASE_PASSWORD:-change-me}@mysql:3306/${DATABASE_NAME:-moonsconfig}
+      PLATFORM_DATABASE_URL: mysql://${DATABASE_USER:-moon_user}:${DATABASE_PASSWORD:-change-me}@mysql:3306/moonsconfig_platform
+      TENANT_DATABASE_BASE_URL: mysql://${DATABASE_USER:-moon_user}:${DATABASE_PASSWORD:-change-me}@mysql:3306
+      TENANT_PROVISIONING_DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD:-change-root-password}@mysql:3306
+      TENANT_DATABASE_CONNECTION_LIMIT: ${TENANT_DATABASE_CONNECTION_LIMIT:-3}
+      TENANT_CREDENTIAL_ENCRYPTION_KEY: ${TENANT_CREDENTIAL_ENCRYPTION_KEY:?TENANT_CREDENTIAL_ENCRYPTION_KEY is required}
+      APP_BASE_DOMAIN: ${APP_BASE_DOMAIN:-localhost}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
+      JWT_ISSUER: ${JWT_ISSUER:-moonsconfig}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-moonsconfig-client}
+      AUTH_PASSWORD_PEPPER: ${AUTH_PASSWORD_PEPPER:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5174,http://localhost:8080}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      CUSTOMER_COOKIE_SAME_SITE: ${CUSTOMER_COOKIE_SAME_SITE:-lax}
+      SOCKET_IO_ENABLED: ${SOCKET_IO_ENABLED:-true}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      IMAP_USER: ${IMAP_USER:-}
+      IMAP_PASS: ${IMAP_PASS:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_API_KEYS: ${GEMINI_API_KEYS:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+      GOOGLE_ADS_DEVELOPER_TOKEN: ${GOOGLE_ADS_DEVELOPER_TOKEN:-}
+      META_ACCESS_TOKEN: ${META_ACCESS_TOKEN:-}
+      PUBLIC_SITE_ORIGIN: ${PUBLIC_SITE_ORIGIN:-http://localhost:8080}
+      CONFIG_PUBLIC_URL: ${CONFIG_PUBLIC_URL:-http://localhost:8080}
+      UPLOAD_DIRECTORY: /app/uploads
+      LOG_DIRECTORY: /app/storage/logs
+    command:
+      [
+        'sh',
+        '-c',
+        'npx prisma migrate deploy --schema prisma/platform/schema.prisma && npx prisma migrate deploy && node dist/server.js',
+      ]
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/storage/logs
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4000/api/v1/health']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    environment: *server-env
+    command: ['node', 'dist/workers/index.js']
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/storage/logs
+    depends_on:
+      api: { condition: service_healthy }
+    restart: unless-stopped
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:8080/healthz']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  nginx:
+    build: ./nginx
+    ports:
+      - '8080:8080'
+      - '5060:5060/udp'
+      - '5060:5060/tcp'
+    depends_on:
+      api: { condition: service_healthy }
+      client: { condition: service_healthy }
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:8080/nginx-health']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  redis_data:
+  uploads_data:
+  logs_data:

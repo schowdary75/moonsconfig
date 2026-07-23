@@ -1,0 +1,3503 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model CrmUser {
+  id                                        Int                @id @default(autoincrement())
+  email                                     String             @unique(map: "email") @db.VarChar(255)
+  passwordHash                              String             @map("password_hash") @db.VarChar(255)
+  role                                      CrmUserRole        @default(viewer)
+  name                                      String?            @db.VarChar(255)
+  createdAt                                 DateTime           @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt                                 DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  mobile                                    String?            @db.VarChar(50)
+  badgeKey                                  String?            @default("passport_elite") @map("badge_key") @db.VarChar(80)
+  assets                                    assets[]
+  sessions                                  CrmAuthSession[]
+  lead_followups                            lead_followups[]
+  marketing_leads                           marketing_leads[]
+  packages_packages_created_byTocrm_users   packages[]         @relation("packages_created_byTocrm_users")
+  packages_packages_published_byTocrm_users packages[]         @relation("packages_published_byTocrm_users")
+  packages_packages_updated_byTocrm_users   packages[]         @relation("packages_updated_byTocrm_users")
+  quotes                                    quotes[]
+  refreshTokens                             AuthRefreshToken[]
+  roles                                     CrmUserRoleLink[]
+
+  @@map("crm_users")
+}
+
+model CrmAuthSession {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  tokenHash String   @unique(map: "token_hash") @map("token_hash") @db.Char(64)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  expiresAt DateTime @map("expires_at") @db.DateTime(0)
+  user      CrmUser  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "crm_auth_sessions_ibfk_1")
+
+  @@index([userId], map: "user_id")
+  @@map("crm_auth_sessions")
+}
+
+model CrmUserRoleLink {
+  userId    Int                 @map("user_id")
+  role      crm_user_roles_role
+  createdAt DateTime            @default(now()) @map("created_at") @db.Timestamp(0)
+  user      CrmUser             @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "crm_user_roles_user_id_fkey")
+
+  @@id([userId, role])
+  @@index([role], map: "idx_crm_user_roles_role")
+  @@map("crm_user_roles")
+}
+
+model CustomerUser {
+  id             Int                @id @default(autoincrement())
+  name           String             @db.VarChar(255)
+  email          String             @unique(map: "email") @db.VarChar(255)
+  passwordHash   String?            @map("password_hash") @db.VarChar(255)
+  oauthProvider  String?            @map("oauth_provider") @db.VarChar(50)
+  oauthId        String?            @map("oauth_id") @db.VarChar(255)
+  points_balance Int?               @default(500)
+  avatar_url     String?            @db.VarChar(255)
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamp(0)
+  buddy_id       Int?
+  phone          String?            @unique(map: "phone") @db.VarChar(50)
+  address        String?            @db.Text
+  city           String?            @db.VarChar(120)
+  state          String?            @db.VarChar(120)
+  postal_code    String?            @db.VarChar(30)
+  country        String?            @db.VarChar(120)
+  is_guest       Boolean            @default(false)
+  invoices       invoices[]
+  refreshTokens  AuthRefreshToken[]
+  devices        CustomerDevice[]
+
+  @@index([buddy_id], map: "buddy_id")
+  @@map("users")
+}
+
+model CustomerDevice {
+  id         Int          @id @default(autoincrement())
+  userId     Int          @map("user_id")
+  token      String       @unique(map: "uq_customer_devices_token") @db.VarChar(512)
+  platform   String       @db.VarChar(20)
+  appVersion String?      @map("app_version") @db.VarChar(40)
+  lastSeenAt DateTime     @default(now()) @map("last_seen_at") @db.Timestamp(0)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  user       CustomerUser @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "customer_devices_user_id_fkey")
+
+  @@index([userId], map: "idx_customer_devices_user")
+  @@index([platform], map: "idx_customer_devices_platform")
+  @@map("customer_devices")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model accommodation_listings {
+  id                 Int                                    @id @default(autoincrement())
+  slug               String                                 @unique(map: "slug") @db.VarChar(220)
+  type               accommodation_listings_type            @default(hotel)
+  name               String                                 @db.VarChar(220)
+  destination        String                                 @db.VarChar(100)
+  country            String                                 @db.VarChar(100)
+  location           String                                 @db.VarChar(220)
+  description        String                                 @db.Text
+  price_inr          Int
+  rating             Decimal                                @default(4.5) @db.Decimal(2, 1)
+  review_count       Int                                    @default(0)
+  beds               Int                                    @default(1)
+  baths              Int                                    @default(1)
+  guests             Int                                    @default(2)
+  phone              String?                                @db.VarChar(100)
+  email              String?                                @db.VarChar(220)
+  star_rating        Int                                    @default(3)
+  amenities          String?                                @db.LongText
+  image_url          String?                                @db.VarChar(500)
+  image_key          String                                 @db.VarChar(50)
+  latitude           Decimal                                @db.Decimal(10, 6)
+  longitude          Decimal                                @db.Decimal(10, 6)
+  tags               String?                                @db.LongText
+  host_name          String                                 @default("Tripiy Host") @db.VarChar(160)
+  is_active          Boolean                                @default(true)
+  created_at         DateTime                               @default(now()) @db.Timestamp(0)
+  vendor_id          Int?
+  approval_status    accommodation_listings_approval_status @default(approved)
+  image_source       String?                                @db.VarChar(80)
+  image_source_url   String?                                @db.VarChar(500)
+  image_photographer String?                                @db.VarChar(160)
+  approved_at        DateTime?                              @db.DateTime(0)
+  updated_at         DateTime?                              @default(now()) @db.DateTime(0)
+  is_verified        Boolean?                               @default(false)
+  source_name        String?                                @db.VarChar(255)
+  price_source_url   String?                                @db.VarChar(500)
+  contact_source_url String?                                @db.VarChar(500)
+  google_search_url  String?                                @db.VarChar(500)
+  last_checked_at    DateTime?                              @db.Date
+  confidence         String?                                @db.VarChar(40)
+  price_basis        String?                                @db.VarChar(160)
+  research_notes     String?                                @db.Text
+  meta_title         String?                                @db.VarChar(255)
+  meta_description   String?                                @db.Text
+  meta_keywords      String?                                @db.Text
+}
+
+model ad_campaigns {
+  id                  Int                       @id @default(autoincrement())
+  platform            ad_campaigns_platform
+  destination         String                    @db.VarChar(255)
+  objective           String?                   @db.VarChar(100)
+  buying_type         String?                   @db.VarChar(100)
+  special_ad_category String?                   @db.VarChar(100)
+  budget_type         ad_campaigns_budget_type? @default(daily)
+  budget_amount       Decimal?                  @db.Decimal(10, 2)
+  bid_strategy        String?                   @db.VarChar(100)
+  start_date          DateTime?                 @db.DateTime(0)
+  end_date            DateTime?                 @db.DateTime(0)
+  status              ad_campaigns_status       @default(draft)
+  name                String                    @db.Text
+  research_json       String?                   @db.Text
+  settings_json       String?                   @db.Text
+  created_at          DateTime                  @default(now()) @db.Timestamp(0)
+  updated_at          DateTime                  @default(now()) @db.Timestamp(0)
+  external_id         String?                   @db.VarChar(100)
+  published_at        DateTime?                 @db.DateTime(0)
+}
+
+model ad_creatives {
+  id                 Int      @id @default(autoincrement())
+  ad_set_id          Int
+  name               String   @db.Text
+  format             String?  @db.VarChar(100)
+  primary_texts_json String?  @db.Text
+  headlines_json     String?  @db.Text
+  descriptions_json  String?  @db.Text
+  cta                String?  @db.VarChar(100)
+  display_url        String?  @db.VarChar(255)
+  final_url          String?  @db.Text
+  utm_string         String?  @db.Text
+  brief_json         String?  @db.Text
+  asset_links_json   String?  @db.Text
+  created_at         DateTime @default(now()) @db.Timestamp(0)
+  updated_at         DateTime @default(now()) @db.Timestamp(0)
+  external_id        String?  @db.VarChar(100)
+}
+
+model ad_platform_connections {
+  id                Int                              @id @default(autoincrement())
+  platform          ad_platform_connections_platform
+  credentials_json  String                           @db.Text
+  status            ad_platform_connections_status   @default(unverified)
+  last_error        String?                          @db.Text
+  last_validated_at DateTime?                        @db.DateTime(0)
+  created_at        DateTime                         @default(now()) @db.Timestamp(0)
+  updated_at        DateTime                         @default(now()) @db.Timestamp(0)
+}
+
+model ad_sets {
+  id                         Int      @id @default(autoincrement())
+  campaign_id                Int
+  name                       String   @db.Text
+  conversion_location        String?  @db.VarChar(100)
+  performance_goal           String?  @db.VarChar(100)
+  pixel_event                String?  @db.VarChar(100)
+  budget                     Decimal? @db.Decimal(10, 2)
+  schedule_json              String?  @db.Text
+  audience_json              String?  @db.Text
+  placements_json            String?  @db.Text
+  optimization_delivery_json String?  @db.Text
+  keywords_json              String?  @db.Text
+  created_at                 DateTime @default(now()) @db.Timestamp(0)
+  updated_at                 DateTime @default(now()) @db.Timestamp(0)
+  external_id                String?  @db.VarChar(100)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model admin_audit_logs {
+  id          Int      @id @default(autoincrement())
+  admin_email String   @db.VarChar(255)
+  action      String   @db.VarChar(100)
+  target_type String   @db.VarChar(100)
+  target_id   String?  @db.VarChar(100)
+  before_json String?  @db.LongText
+  after_json  String?  @db.LongText
+  ip_address  String?  @db.VarChar(64)
+  user_agent  String?  @db.VarChar(500)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([admin_email], map: "idx_admin_audit_admin")
+  @@index([target_type, target_id], map: "idx_admin_audit_target")
+}
+
+model admin_users {
+  id         Int              @id @default(autoincrement())
+  email      String           @unique(map: "email") @db.VarChar(255)
+  role       admin_users_role @default(admin)
+  is_active  Boolean          @default(true)
+  created_at DateTime         @default(now()) @db.Timestamp(0)
+  updated_at DateTime         @default(now()) @db.Timestamp(0)
+}
+
+model assets {
+  id          Int               @id @default(autoincrement())
+  filename    String            @db.VarChar(255)
+  mime_type   String            @db.VarChar(100)
+  byte_size   Int
+  storage_url String            @db.VarChar(500)
+  alt_text    String?           @db.VarChar(255)
+  usage_type  assets_usage_type @default(general)
+  uploaded_by Int?
+  created_at  DateTime          @default(now()) @db.Timestamp(0)
+  crm_users   CrmUser?          @relation(fields: [uploaded_by], references: [id], onUpdate: NoAction, map: "assets_ibfk_1")
+
+  @@index([uploaded_by], map: "uploaded_by")
+}
+
+model auth_sessions {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  token_hash String    @unique(map: "token_hash") @db.Char(64)
+  created_at DateTime  @default(now()) @db.Timestamp(0)
+  expires_at DateTime  @db.DateTime(0)
+  revoked_at DateTime? @db.Timestamp(0)
+
+  @@index([expires_at], map: "idx_auth_sessions_expiry")
+  @@index([user_id], map: "idx_auth_sessions_user")
+}
+
+model blocked_ips {
+  ip_address       String   @id @db.VarChar(45)
+  blocked_at       DateTime @default(now()) @db.Timestamp(0)
+  reason           String   @db.VarChar(255)
+  user_agent       String?  @db.Text
+  request_count    Int?     @default(1)
+  last_request_at  DateTime @default(now()) @db.Timestamp(0)
+  first_blocked_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model blog_authors {
+  id         Int          @id @default(autoincrement())
+  name       String       @db.VarChar(180)
+  slug       String       @unique(map: "slug") @db.VarChar(180)
+  bio        String?      @db.Text
+  avatar_url String?      @db.VarChar(500)
+  created_at DateTime     @default(now()) @db.Timestamp(0)
+  blog_posts blog_posts[]
+}
+
+model blog_categories {
+  id          Int          @id @default(autoincrement())
+  slug        String       @unique(map: "slug") @db.VarChar(180)
+  name        String       @db.VarChar(180)
+  description String?      @db.Text
+  created_at  DateTime     @default(now()) @db.Timestamp(0)
+  blog_posts  blog_posts[]
+}
+
+model blog_post_tags {
+  post_id    Int
+  tag_id     Int
+  blog_posts blog_posts @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "blog_post_tags_ibfk_1")
+  blog_tags  blog_tags  @relation(fields: [tag_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "blog_post_tags_ibfk_2")
+
+  @@id([post_id, tag_id])
+  @@index([tag_id], map: "tag_id")
+}
+
+model blog_posts {
+  id              Int               @id @default(autoincrement())
+  slug            String            @unique(map: "slug") @db.VarChar(220)
+  title           String            @db.VarChar(255)
+  excerpt         String            @db.Text
+  body            String            @db.LongText
+  cover_image_url String?           @db.VarChar(500)
+  author_id       Int
+  category_id     Int?
+  status          blog_posts_status @default(draft)
+  published_at    DateTime?         @db.DateTime(0)
+  seo_title       String?           @db.VarChar(255)
+  seo_description String?           @db.VarChar(320)
+  focus_keyword   String?           @db.VarChar(180)
+  created_at      DateTime          @default(now()) @db.Timestamp(0)
+  updated_at      DateTime          @default(now()) @db.Timestamp(0)
+  blog_post_tags  blog_post_tags[]
+  blog_authors    blog_authors      @relation(fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "blog_posts_ibfk_1")
+  blog_categories blog_categories?  @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "blog_posts_ibfk_2")
+
+  @@index([author_id], map: "author_id")
+  @@index([category_id], map: "category_id")
+}
+
+model blog_tags {
+  id             Int              @id @default(autoincrement())
+  slug           String           @unique(map: "slug") @db.VarChar(180)
+  name           String           @db.VarChar(180)
+  created_at     DateTime         @default(now()) @db.Timestamp(0)
+  blog_post_tags blog_post_tags[]
+}
+
+model bookings {
+  id                Int                @id @default(autoincrement())
+  user_id           Int
+  booking_reference String             @unique(map: "booking_reference") @db.VarChar(100)
+  item_type         bookings_item_type
+  item_name         String             @db.VarChar(255)
+  amount            Int
+  travel_date       DateTime           @db.Date
+  status            bookings_status?   @default(pending)
+  created_at        DateTime           @default(now()) @db.Timestamp(0)
+  operator_id       Int?
+  canonical_trip_id String?            @db.Char(36)
+  traveller_id      String?            @db.Char(36)
+  quote_version_id  String?            @db.Char(36)
+  package_id        Int?
+  invoices          invoices[]
+
+  @@index([canonical_trip_id], map: "idx_bookings_canonical_trip")
+  @@index([traveller_id], map: "idx_bookings_traveller")
+  @@index([quote_version_id], map: "idx_bookings_quote_version")
+  @@index([package_id], map: "idx_bookings_package")
+  @@index([operator_id], map: "operator_id")
+  @@index([user_id], map: "user_id")
+}
+
+model callback_requests {
+  id           Int                       @id @default(autoincrement())
+  name         String                    @db.VarChar(255)
+  phone        String                    @db.VarChar(50)
+  destination  String?                   @db.VarChar(255)
+  requested_at DateTime                  @default(now()) @db.Timestamp(0)
+  status       callback_requests_status? @default(pending)
+}
+
+model campaign_metrics {
+  id           Int                    @id @default(autoincrement())
+  campaign_id  Int?
+  date         DateTime               @db.DateTime(0)
+  level        campaign_metrics_level
+  reference_id Int?
+  impressions  Int?                   @default(0)
+  clicks       Int?                   @default(0)
+  spend        Decimal?               @default(0.00) @db.Decimal(10, 2)
+  leads        Int?                   @default(0)
+  bookings     Int?                   @default(0)
+  created_at   DateTime               @default(now()) @db.Timestamp(0)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model car_listings {
+  id                 Int                          @id @default(autoincrement())
+  slug               String                       @unique(map: "slug") @db.VarChar(220)
+  name               String                       @db.VarChar(220)
+  destination        String                       @db.VarChar(100)
+  country            String                       @db.VarChar(100)
+  vehicle_type       String                       @db.VarChar(80)
+  seats              Int
+  luggage            Int
+  transmission       String                       @db.VarChar(50)
+  fuel_type          String                       @db.VarChar(50)
+  phone              String?                      @db.VarChar(100)
+  email              String?                      @db.VarChar(220)
+  driver_included    Boolean                      @default(true)
+  airport_pickup     Boolean                      @default(true)
+  price_inr          Int
+  rating             Decimal                      @default(4.7) @db.Decimal(2, 1)
+  image_url          String?                      @db.VarChar(500)
+  image_key          String                       @db.VarChar(50)
+  features           String?                      @db.LongText
+  latitude           Decimal                      @db.Decimal(10, 6)
+  longitude          Decimal                      @db.Decimal(10, 6)
+  is_active          Boolean                      @default(true)
+  created_at         DateTime                     @default(now()) @db.Timestamp(0)
+  vendor_id          Int?
+  approval_status    car_listings_approval_status @default(approved)
+  image_source       String?                      @db.VarChar(80)
+  image_source_url   String?                      @db.VarChar(500)
+  image_photographer String?                      @db.VarChar(160)
+  approved_at        DateTime?                    @db.DateTime(0)
+  updated_at         DateTime?                    @default(now()) @db.DateTime(0)
+  is_verified        Boolean?                     @default(false)
+  source_name        String?                      @db.VarChar(255)
+  price_source_url   String?                      @db.VarChar(500)
+  contact_source_url String?                      @db.VarChar(500)
+  google_search_url  String?                      @db.VarChar(500)
+  last_checked_at    DateTime?                    @db.Date
+  confidence         String?                      @db.VarChar(40)
+  price_basis        String?                      @db.VarChar(160)
+  research_notes     String?                      @db.Text
+  meta_title         String?                      @db.VarChar(255)
+  meta_description   String?                      @db.Text
+  meta_keywords      String?                      @db.Text
+  b2b_price          Int?                         @default(0)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model careers_applications {
+  id                Int                         @id @default(autoincrement())
+  job_id            Int
+  name              String                      @db.VarChar(255)
+  email             String                      @db.VarChar(255)
+  phone             String                      @db.VarChar(50)
+  resume_url        String                      @db.VarChar(500)
+  cover_letter      String                      @db.Text
+  status            careers_applications_status @default(pending)
+  interview_date    DateTime?                   @db.DateTime(0)
+  interview_type    String?                     @db.VarChar(50)
+  interview_link    String?                     @db.VarChar(500)
+  interview_notes   String?                     @db.Text
+  created_at        DateTime                    @default(now()) @db.Timestamp(0)
+  mock_test_score   Int?
+  mock_test_answers String?                     @db.LongText
+
+  @@index([job_id], map: "job_id")
+}
+
+model careers_jobs {
+  id               Int      @id @default(autoincrement())
+  title            String   @db.VarChar(255)
+  department       String   @db.VarChar(100)
+  location         String   @db.VarChar(100)
+  type             String   @db.VarChar(50)
+  description      String   @db.Text
+  requirements     String   @db.Text
+  responsibilities String   @db.Text
+  is_active        Boolean  @default(true)
+  created_at       DateTime @default(now()) @db.Timestamp(0)
+}
+
+model catalog_amenities {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique(map: "name") @db.VarChar(160)
+  category   String?  @db.VarChar(80)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model catalog_amenity_links {
+  id           Int                                @id @default(autoincrement())
+  catalog_type catalog_amenity_links_catalog_type
+  catalog_id   Int
+  amenity_id   Int
+
+  @@unique([catalog_type, catalog_id, amenity_id], map: "uniq_catalog_amenity")
+  @@index([catalog_type, catalog_id], map: "idx_catalog_amenity_item")
+}
+
+model catalog_features {
+  id            Int                           @id @default(autoincrement())
+  catalog_type  catalog_features_catalog_type
+  catalog_id    Int
+  feature_type  catalog_features_feature_type
+  title         String                        @db.VarChar(255)
+  description   String?                       @db.Text
+  vendor_id     Int?
+  net_cost      Decimal?                      @default(0.00) @db.Decimal(10, 2)
+  selling_price Decimal?                      @default(0.00) @db.Decimal(10, 2)
+  created_at    DateTime                      @default(now()) @db.Timestamp(0)
+  vendors       vendors?                      @relation(fields: [vendor_id], references: [id], onUpdate: NoAction, map: "catalog_features_ibfk_1")
+
+  @@index([catalog_type, catalog_id], map: "idx_catalog_item")
+  @@index([vendor_id], map: "vendor_id")
+}
+
+model catalog_media {
+  id           Int                        @id @default(autoincrement())
+  catalog_type catalog_media_catalog_type
+  catalog_id   Int
+  media_type   catalog_media_media_type?  @default(image)
+  media_path   String                     @db.VarChar(500)
+  is_primary   Boolean?                   @default(false)
+  sort_order   Int?                       @default(0)
+  created_at   DateTime                   @default(now()) @db.Timestamp(0)
+  alt_text     String?                    @db.VarChar(255)
+
+  @@index([catalog_type, catalog_id], map: "idx_catalog_item")
+}
+
+model catalog_pricing {
+  id             Int                          @id @default(autoincrement())
+  catalog_type   catalog_pricing_catalog_type
+  catalog_id     Int
+  vendor_id      Int?
+  net_cost       Decimal?                     @default(0.00) @db.Decimal(10, 2)
+  margin_percent Decimal?                     @default(25.00) @db.Decimal(5, 2)
+  selling_price  Decimal?                     @default(0.00) @db.Decimal(10, 2)
+  currency       String?                      @default("INR") @db.Char(3)
+  created_at     DateTime                     @default(now()) @db.Timestamp(0)
+  updated_at     DateTime                     @default(now()) @db.Timestamp(0)
+  vendors        vendors?                     @relation(fields: [vendor_id], references: [id], onUpdate: NoAction, map: "catalog_pricing_ibfk_1")
+
+  @@index([catalog_type, catalog_id], map: "idx_catalog_item")
+  @@index([vendor_id], map: "vendor_id")
+}
+
+model catalog_rate_cards {
+  id             Int                             @id @default(autoincrement())
+  catalog_type   catalog_rate_cards_catalog_type
+  catalog_id     Int
+  vendor_id      Int?
+  unit_type      catalog_rate_cards_unit_type    @default(fixed)
+  net_cost       Decimal                         @default(0.00) @db.Decimal(12, 2)
+  margin_percent Decimal                         @default(25.00) @db.Decimal(5, 2)
+  selling_price  Decimal                         @default(0.00) @db.Decimal(12, 2)
+  currency       String                          @default("INR") @db.Char(3)
+  valid_from     DateTime?                       @db.Date
+  valid_to       DateTime?                       @db.Date
+  min_pax        Int?
+  occupancy      Int?
+  is_active      Boolean                         @default(true)
+  created_at     DateTime                        @default(now()) @db.Timestamp(0)
+  updated_at     DateTime?                       @default(now()) @db.DateTime(0)
+
+  @@index([catalog_type, catalog_id, is_active], map: "idx_catalog_rate_item")
+  @@index([vendor_id], map: "idx_catalog_rate_vendor")
+}
+
+model catalog_research_sources {
+  id                 Int                                   @id @default(autoincrement())
+  catalog_type       catalog_research_sources_catalog_type
+  catalog_id         Int
+  source_name        String?                               @db.VarChar(255)
+  price_source_url   String?                               @db.VarChar(500)
+  contact_source_url String?                               @db.VarChar(500)
+  google_search_url  String?                               @db.VarChar(500)
+  last_checked_at    DateTime?                             @db.Date
+  confidence         catalog_research_sources_confidence   @default(estimated)
+  price_basis        String?                               @db.VarChar(160)
+  research_notes     String?                               @db.Text
+  created_at         DateTime                              @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?                             @default(now()) @db.DateTime(0)
+
+  @@unique([catalog_type, catalog_id], map: "uniq_catalog_research_source")
+}
+
+model client_lounge_comments {
+  id           Int      @id @default(autoincrement())
+  package_id   Int
+  author       String   @db.VarChar(255)
+  comment_text String   @db.Text
+  day_number   Int
+  created_at   DateTime @default(now()) @db.Timestamp(0)
+}
+
+model contact_submissions {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  email       String   @db.VarChar(255)
+  destination String   @db.VarChar(255)
+  message     String   @db.Text
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+}
+
+model crm_clients {
+  id             Int                @id @default(autoincrement())
+  name           String             @db.VarChar(255)
+  email          String?            @db.VarChar(255)
+  phone          String?            @db.VarChar(50)
+  status         crm_clients_status @default(Lead)
+  lifetime_value Decimal?           @default(0.00) @db.Decimal(10, 2)
+  last_active    String?            @db.VarChar(100)
+  created_at     DateTime           @default(now()) @db.Timestamp(0)
+}
+
+model crm_deals {
+  id             Int              @id @default(autoincrement())
+  title          String           @db.VarChar(255)
+  value          Decimal?         @db.Decimal(10, 2)
+  pipeline_id    Int
+  status         crm_deals_status @default(open)
+  customer_name  String?          @db.VarChar(255)
+  customer_email String?          @db.VarChar(255)
+  customer_phone String?          @db.VarChar(50)
+  notes          String?          @db.Text
+  created_at     DateTime         @default(now()) @db.Timestamp(0)
+  updated_at     DateTime         @default(now()) @db.Timestamp(0)
+}
+
+model crm_pipelines {
+  id    Int    @id @default(autoincrement())
+  name  String @db.VarChar(100)
+  order Int    @default(0)
+}
+
+model crm_quotes {
+  id           Int               @id @default(autoincrement())
+  deal_id      Int
+  quote_data   String?           @db.Text
+  total_amount Decimal           @db.Decimal(10, 2)
+  valid_until  DateTime?         @db.DateTime(0)
+  status       crm_quotes_status @default(draft)
+  created_at   DateTime          @default(now()) @db.Timestamp(0)
+}
+
+model crm_role_permissions {
+  role       crm_role_permissions_role
+  module_key String                    @db.VarChar(80)
+  can_access Boolean                   @default(true)
+  updated_at DateTime                  @default(now()) @db.Timestamp(0)
+
+  @@id([role, module_key])
+}
+
+model crm_tasks {
+  id           Int                 @id @default(autoincrement())
+  deal_id      Int?
+  title        String              @db.VarChar(255)
+  due_date     DateTime?           @db.DateTime(0)
+  is_completed Boolean             @default(false)
+  task_type    crm_tasks_task_type @default(todo)
+  created_at   DateTime            @default(now()) @db.Timestamp(0)
+}
+
+model cruise_listings {
+  id                 Int                    @id @default(autoincrement())
+  line               String                 @db.VarChar(200)
+  ship               String                 @db.VarChar(200)
+  itinerary          String                 @db.VarChar(200)
+  country            String                 @db.VarChar(100)
+  date_sailing       String                 @db.VarChar(100)
+  inside_price       Int
+  balcony_price      Int
+  suite_price        Int
+  status             cruise_listings_status
+  is_verified        Boolean?               @default(false)
+  created_at         DateTime               @default(now()) @db.Timestamp(0)
+  source_name        String?                @db.VarChar(255)
+  price_source_url   String?                @db.VarChar(500)
+  contact_source_url String?                @db.VarChar(500)
+  google_search_url  String?                @db.VarChar(500)
+  last_checked_at    DateTime?              @db.Date
+  confidence         String?                @db.VarChar(40)
+  price_basis        String?                @db.VarChar(160)
+  research_notes     String?                @db.Text
+  phone              String?                @db.VarChar(100)
+  email              String?                @db.VarChar(220)
+  meta_title         String?                @db.VarChar(255)
+  meta_description   String?                @db.Text
+  meta_keywords      String?                @db.Text
+  vendor_id          Int?
+  b2b_price          Int?                   @default(0)
+  image_url          String?                @db.VarChar(500)
+}
+
+model customer_reviews {
+  id           Int                        @id @default(autoincrement())
+  item_type    customer_reviews_item_type @default(general)
+  item_id      String?                    @db.VarChar(80)
+  rating       Int
+  author_name  String                     @db.VarChar(180)
+  review_text  String                     @db.Text
+  travel_date  DateTime?                  @db.Date
+  status       customer_reviews_status    @default(pending)
+  published_at DateTime?                  @db.DateTime(0)
+  created_at   DateTime                   @default(now()) @db.Timestamp(0)
+
+  @@index([status, item_type, item_id], map: "idx_customer_reviews_public")
+}
+
+model destinations {
+  id               Int     @id @default(autoincrement())
+  name             String  @db.VarChar(100)
+  country          String  @db.VarChar(100)
+  price            String  @db.VarChar(50)
+  nights           Int
+  image_key        String  @db.VarChar(50)
+  tag              String  @db.VarChar(50)
+  meta_title       String? @db.VarChar(255)
+  meta_description String? @db.Text
+  meta_keywords    String? @db.Text
+}
+
+model email_templates {
+  id         Int                  @id @default(autoincrement())
+  name       String               @db.VarChar(255)
+  subject    String               @db.VarChar(255)
+  body       String               @db.Text
+  type       email_templates_type @default(other)
+  created_at DateTime             @default(now()) @db.Timestamp(0)
+  updated_at DateTime             @default(now()) @db.Timestamp(0)
+  scope_tags String?              @default("full") @db.VarChar(255)
+  is_active  Boolean              @default(true)
+}
+
+model escrow_ledger {
+  id                     Int                          @id @default(autoincrement())
+  booking_id             Int
+  milestone_type         escrow_ledger_milestone_type
+  amount                 Int
+  status                 escrow_ledger_status?        @default(held)
+  scheduled_release_date DateTime?                    @db.Date
+  actual_release_date    DateTime?                    @db.Timestamp(0)
+  created_at             DateTime                     @default(now()) @db.Timestamp(0)
+
+  @@index([booking_id], map: "booking_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model experience_listings {
+  id                 Int                                 @id @default(autoincrement())
+  slug               String                              @unique(map: "slug") @db.VarChar(220)
+  title              String                              @db.VarChar(220)
+  destination        String                              @db.VarChar(100)
+  country            String                              @db.VarChar(100)
+  place              String                              @db.VarChar(160)
+  description        String                              @db.Text
+  price_inr          Int
+  duration           String                              @db.VarChar(80)
+  group_size         Int
+  inclusions         String?                             @db.LongText
+  meeting_point      String                              @db.VarChar(220)
+  phone              String?                             @db.VarChar(100)
+  email              String?                             @db.VarChar(220)
+  rating             Decimal                             @default(4.8) @db.Decimal(2, 1)
+  image_url          String?                             @db.VarChar(500)
+  image_key          String                              @db.VarChar(50)
+  is_active          Boolean                             @default(true)
+  created_at         DateTime                            @default(now()) @db.Timestamp(0)
+  vendor_id          Int?
+  approval_status    experience_listings_approval_status @default(approved)
+  image_source       String?                             @db.VarChar(80)
+  image_source_url   String?                             @db.VarChar(500)
+  image_photographer String?                             @db.VarChar(160)
+  approved_at        DateTime?                           @db.DateTime(0)
+  updated_at         DateTime?                           @default(now()) @db.DateTime(0)
+  is_verified        Boolean?                            @default(false)
+  source_name        String?                             @db.VarChar(255)
+  price_source_url   String?                             @db.VarChar(500)
+  contact_source_url String?                             @db.VarChar(500)
+  google_search_url  String?                             @db.VarChar(500)
+  last_checked_at    DateTime?                           @db.Date
+  confidence         String?                             @db.VarChar(40)
+  price_basis        String?                             @db.VarChar(160)
+  research_notes     String?                             @db.Text
+  meta_title         String?                             @db.VarChar(255)
+  meta_description   String?                             @db.Text
+  meta_keywords      String?                             @db.Text
+}
+
+model experiences {
+  id          Int    @id @default(autoincrement())
+  title       String @db.VarChar(150)
+  place       String @db.VarChar(100)
+  description String @db.Text
+  price       String @db.VarChar(50)
+}
+
+model flight_allotments {
+  id              Int                      @id @default(autoincrement())
+  airline         String                   @db.VarChar(160)
+  flight_no       String                   @db.VarChar(40)
+  origin          String                   @db.VarChar(80)
+  destination     String                   @db.VarChar(80)
+  departure_time  String                   @db.VarChar(40)
+  arrival_time    String                   @db.VarChar(40)
+  cabin_class     String                   @db.VarChar(80)
+  net_fare        Decimal                  @default(0.00) @db.Decimal(12, 2)
+  selling_price   Decimal                  @default(0.00) @db.Decimal(12, 2)
+  seats_total     Int                      @default(0)
+  seats_available Int                      @default(0)
+  supplier_name   String?                  @db.VarChar(180)
+  status          flight_allotments_status @default(available)
+  created_by      String?                  @db.VarChar(255)
+  updated_by      String?                  @db.VarChar(255)
+  created_at      DateTime                 @default(now()) @db.Timestamp(0)
+  updated_at      DateTime                 @default(now()) @db.Timestamp(0)
+
+  @@index([origin, destination], map: "idx_flight_allotments_route")
+  @@index([status], map: "idx_flight_allotments_status")
+}
+
+model global_chat_conversation_pins {
+  user_id     String                                    @db.VarChar(255)
+  target_id   String                                    @db.VarChar(255)
+  target_type global_chat_conversation_pins_target_type
+  created_at  DateTime?                                 @default(now()) @db.DateTime(0)
+
+  @@id([user_id, target_id, target_type])
+}
+
+model global_chat_group_members {
+  group_id    String    @db.VarChar(255)
+  entity_id   String    @db.VarChar(255)
+  entity_type String    @db.VarChar(50)
+  joined_at   DateTime? @default(now()) @db.DateTime(0)
+
+  @@id([group_id, entity_id, entity_type])
+  @@index([entity_id, entity_type], map: "idx_global_chat_group_members_entity")
+}
+
+model global_chat_groups {
+  id         String    @id @db.VarChar(255)
+  name       String    @db.VarChar(255)
+  created_by String    @db.VarChar(255)
+  created_at DateTime? @default(now()) @db.DateTime(0)
+}
+
+model global_chat_messages {
+  id            Int                               @id @default(autoincrement())
+  sender_id     String                            @db.VarChar(255)
+  sender_type   String                            @db.VarChar(50)
+  receiver_id   String                            @db.VarChar(255)
+  receiver_type String                            @db.VarChar(50)
+  message_text  String                            @db.Text
+  created_at    DateTime?                         @default(now()) @db.DateTime(0)
+  request_id    Int?
+  message_type  global_chat_messages_message_type @default(user)
+  read_at       DateTime?                         @db.DateTime(0)
+  delivered_at  DateTime?                         @db.DateTime(0)
+  is_pinned     Boolean?                          @default(false)
+
+  @@index([request_id, created_at], map: "idx_global_chat_messages_request")
+}
+
+model global_chat_reactions {
+  id          Int       @id @default(autoincrement())
+  message_id  Int
+  entity_id   String    @db.VarChar(255)
+  entity_type String    @db.VarChar(50)
+  emoji       String    @db.VarChar(32)
+  created_at  DateTime? @default(now()) @db.DateTime(0)
+  updated_at  DateTime? @default(now()) @db.DateTime(0)
+
+  @@unique([message_id, entity_id, entity_type], map: "uniq_global_chat_reaction_user")
+  @@index([message_id], map: "idx_global_chat_reactions_message")
+}
+
+model global_chat_requests {
+  id                     Int                         @id @default(autoincrement())
+  customer_id            String                      @db.VarChar(255)
+  customer_type          String                      @default("lead") @db.VarChar(50)
+  customer_name          String                      @db.VarChar(255)
+  first_message          String                      @db.Text
+  status                 global_chat_requests_status @default(pending)
+  assigned_employee_id   String?                     @db.VarChar(255)
+  assigned_employee_name String?                     @db.VarChar(255)
+  assigned_employee_role String?                     @db.VarChar(100)
+  created_at             DateTime?                   @default(now()) @db.DateTime(0)
+  expires_at             DateTime                    @db.DateTime(0)
+  accepted_at            DateTime?                   @db.DateTime(0)
+  updated_at             DateTime?                   @default(now()) @db.DateTime(0)
+  ai_is_typing           Boolean?                    @default(false)
+
+  @@index([assigned_employee_id, status], map: "idx_global_chat_requests_assignee")
+  @@index([customer_id, status], map: "idx_global_chat_requests_customer")
+  @@index([status, expires_at], map: "idx_global_chat_requests_status")
+}
+
+model global_seo_settings {
+  id            Int      @id @default(autoincrement())
+  setting_key   String   @unique(map: "setting_key") @db.VarChar(100)
+  setting_value String?  @db.Text
+  updated_at    DateTime @default(now()) @db.Timestamp(0)
+}
+
+model invoices {
+  id             Int              @id @default(autoincrement())
+  invoice_number String           @unique(map: "invoice_number") @db.VarChar(50)
+  booking_id     Int
+  user_id        Int
+  amount         Decimal          @db.Decimal(10, 2)
+  status         invoices_status? @default(generated)
+  created_at     DateTime?        @default(now()) @db.DateTime(0)
+  bookings       bookings         @relation(fields: [booking_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "invoices_ibfk_1")
+  users          CustomerUser     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "invoices_ibfk_2")
+
+  @@index([booking_id], map: "booking_id")
+  @@index([user_id], map: "user_id")
+}
+
+model item_reviews {
+  id         Int      @id @default(autoincrement())
+  item_id    String   @db.VarChar(255)
+  author     String   @db.VarChar(255)
+  rating     Int
+  comment    String   @db.Text
+  created_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model itinerary_customizations {
+  id               Int                                 @id @default(autoincrement())
+  booking_id       Int
+  pace_mode        itinerary_customizations_pace_mode? @default(Balanced)
+  custom_itinerary String?                             @db.LongText
+  created_at       DateTime                            @default(now()) @db.Timestamp(0)
+
+  @@index([booking_id], map: "booking_id")
+}
+
+model lead_followups {
+  id             Int                           @id @default(autoincrement())
+  lead_id        Int
+  user_id        Int?
+  follow_up_date DateTime                      @db.DateTime(0)
+  notes          String?                       @db.Text
+  status         lead_followups_status?        @default(pending)
+  created_at     DateTime                      @default(now()) @db.Timestamp(0)
+  follow_up_type lead_followups_follow_up_type @default(call)
+  channel        String?                       @db.VarChar(80)
+  outcome        String?                       @db.Text
+  completed_at   DateTime?                     @db.DateTime(0)
+  crm_users      CrmUser?                      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "lead_followups_ibfk_2")
+
+  @@index([follow_up_date, status], map: "idx_followups_date_status")
+  @@index([lead_id], map: "idx_followups_lead")
+  @@index([user_id], map: "user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model lead_submissions {
+  id                 Int                       @id @default(autoincrement())
+  name               String                    @db.VarChar(255)
+  phone              String                    @db.VarChar(50)
+  email              String                    @db.VarChar(255)
+  destination        String                    @db.VarChar(255)
+  travel_month       String?                   @db.VarChar(80)
+  travelers_count    Int                       @default(2)
+  budget_range       String                    @db.VarChar(120)
+  notes              String?                   @db.Text
+  attribution        String?                   @db.LongText
+  status             lead_submissions_status   @default(new)
+  admin_notes        String?                   @db.Text
+  assigned_owner     String?                   @db.VarChar(255)
+  created_at         DateTime                  @default(now()) @db.Timestamp(0)
+  updated_at         DateTime                  @default(now()) @db.Timestamp(0)
+  lead_source        String?                   @db.VarChar(80)
+  priority           lead_submissions_priority @default(medium)
+  next_follow_up_at  DateTime?                 @db.DateTime(0)
+  last_contacted_at  DateTime?                 @db.DateTime(0)
+  ai_managed         Boolean                   @default(false)
+  ai_mode            lead_submissions_ai_mode  @default(autonomous)
+  ai_last_action_at  DateTime?                 @db.DateTime(0)
+  score              Int                       @default(0)
+  call_recording_url String?                   @db.VarChar(255)
+  theme              String?                   @default("General") @db.VarChar(100)
+
+  @@index([created_at], map: "idx_leads_created_at")
+  @@index([email], map: "idx_leads_email")
+  @@index([phone], map: "idx_leads_phone")
+  @@index([status], map: "idx_leads_status")
+}
+
+model newsletter_subscribers {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique(map: "email") @db.VarChar(255)
+  subscribed_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model call_recordings {
+  id           Int                       @id @default(autoincrement())
+  uniqueid     String                    @unique(map: "uq_call_recordings_uniqueid") @db.VarChar(80)
+  direction    call_recordings_direction
+  from_number  String?                   @db.VarChar(64)
+  to_number    String?                   @db.VarChar(64)
+  file_name    String                    @db.VarChar(255)
+  file_size    Int?
+  duration_sec Int?
+  recorded_at  DateTime                  @default(now()) @db.DateTime(0)
+  created_at   DateTime                  @default(now()) @db.Timestamp(0)
+
+  @@index([recorded_at], map: "idx_call_recordings_recorded_at")
+  @@index([direction], map: "idx_call_recordings_direction")
+}
+
+enum call_recordings_direction {
+  inbound
+  outbound
+}
+
+model sms_opt_outs {
+  id         Int      @id @default(autoincrement())
+  phone      String   @unique(map: "uq_sms_opt_outs_phone") @db.VarChar(32)
+  reason     String?  @db.VarChar(64)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model listing_revisions {
+  id           Int                            @id @default(autoincrement())
+  vendor_id    Int
+  listing_type listing_revisions_listing_type
+  listing_id   Int?
+  payload      String                         @db.LongText
+  status       listing_revisions_status       @default(pending_review)
+  admin_notes  String?                        @db.Text
+  reviewed_by  String?                        @db.VarChar(255)
+  reviewed_at  DateTime?                      @db.DateTime(0)
+  created_at   DateTime                       @default(now()) @db.Timestamp(0)
+  updated_at   DateTime?                      @default(now()) @db.DateTime(0)
+
+  @@index([listing_type, listing_id], map: "idx_listing_revisions_listing")
+  @@index([status], map: "idx_listing_revisions_status")
+  @@index([vendor_id], map: "idx_listing_revisions_vendor")
+}
+
+model marketing_leads {
+  id            Int                     @id @default(autoincrement())
+  source        marketing_leads_source? @default(website)
+  campaign_name String?                 @db.VarChar(255)
+  full_name     String                  @db.VarChar(255)
+  email         String?                 @db.VarChar(255)
+  phone         String?                 @db.VarChar(50)
+  requirements  String?                 @db.Text
+  status        marketing_leads_status? @default(new)
+  assigned_to   Int?
+  created_at    DateTime                @default(now()) @db.Timestamp(0)
+  updated_at    DateTime                @default(now()) @db.Timestamp(0)
+  crm_users     CrmUser?                @relation(fields: [assigned_to], references: [id], onUpdate: NoAction, map: "marketing_leads_ibfk_1")
+  quotes        quotes[]
+
+  @@index([assigned_to], map: "assigned_to")
+}
+
+model master_activities {
+  id                Int                      @id @default(autoincrement())
+  slug              String                   @unique(map: "slug") @db.VarChar(220)
+  name              String                   @db.VarChar(220)
+  destination       String                   @db.VarChar(100)
+  country           String                   @db.VarChar(100)
+  place             String?                  @db.VarChar(160)
+  description       String?                  @db.Text
+  duration          String?                  @db.VarChar(80)
+  capacity          Int?
+  status            master_activities_status @default(active)
+  image_url         String?                  @db.VarChar(500)
+  legacy_listing_id Int?
+  created_at        DateTime                 @default(now()) @db.Timestamp(0)
+  updated_at        DateTime?                @default(now()) @db.DateTime(0)
+
+  @@index([destination, status], map: "idx_master_activities_dest")
+}
+
+model master_cars {
+  id                Int                @id @default(autoincrement())
+  slug              String             @unique(map: "slug") @db.VarChar(220)
+  name              String             @db.VarChar(220)
+  destination       String             @db.VarChar(100)
+  country           String             @db.VarChar(100)
+  vehicle_type      String             @default("sedan") @db.VarChar(80)
+  seats             Int                @default(4)
+  luggage           Int                @default(2)
+  transmission      String?            @db.VarChar(50)
+  fuel_type         String?            @db.VarChar(50)
+  description       String?            @db.Text
+  status            master_cars_status @default(active)
+  image_url         String?            @db.VarChar(500)
+  legacy_listing_id Int?
+  created_at        DateTime           @default(now()) @db.Timestamp(0)
+  updated_at        DateTime?          @default(now()) @db.DateTime(0)
+
+  @@index([destination, status], map: "idx_master_cars_dest")
+}
+
+model master_rooms {
+  id          Int                 @id @default(autoincrement())
+  stay_id     Int?
+  name        String              @db.VarChar(220)
+  room_type   String              @default("standard") @db.VarChar(120)
+  destination String              @db.VarChar(100)
+  country     String              @db.VarChar(100)
+  occupancy   Int                 @default(2)
+  meal_plan   String?             @db.VarChar(80)
+  description String?             @db.Text
+  status      master_rooms_status @default(active)
+  image_url   String?             @db.VarChar(500)
+  created_at  DateTime            @default(now()) @db.Timestamp(0)
+  updated_at  DateTime?           @default(now()) @db.DateTime(0)
+
+  @@index([destination, status], map: "idx_master_rooms_dest")
+  @@index([stay_id], map: "idx_master_rooms_stay")
+}
+
+model master_stays {
+  id                Int                 @id @default(autoincrement())
+  slug              String              @unique(map: "slug") @db.VarChar(220)
+  name              String              @db.VarChar(220)
+  type              master_stays_type   @default(hotel)
+  destination       String              @db.VarChar(100)
+  country           String              @db.VarChar(100)
+  location          String?             @db.VarChar(220)
+  description       String?             @db.Text
+  status            master_stays_status @default(active)
+  image_url         String?             @db.VarChar(500)
+  legacy_listing_id Int?
+  created_at        DateTime            @default(now()) @db.Timestamp(0)
+  updated_at        DateTime?           @default(now()) @db.DateTime(0)
+
+  @@index([destination, status], map: "idx_master_stays_dest")
+}
+
+model maya_activity_log {
+  id         Int                      @id @default(autoincrement())
+  area       String                   @db.VarChar(40)
+  action     String                   @db.VarChar(80)
+  ref_id     Int?
+  summary    String                   @db.VarChar(600)
+  status     maya_activity_log_status @default(done)
+  created_at DateTime                 @default(now()) @db.Timestamp(0)
+
+  @@index([area], map: "idx_maya_activity_area")
+  @@index([created_at], map: "idx_maya_activity_created")
+}
+
+model maya_campaign_actions {
+  id               Int                                     @id @default(autoincrement())
+  campaign_id      Int
+  what             String                                  @db.Text
+  why              String                                  @db.Text
+  expected_impact  String?                                 @db.Text
+  confidence_level maya_campaign_actions_confidence_level? @default(medium)
+  status           maya_campaign_actions_status            @default(pending)
+  created_at       DateTime                                @default(now()) @db.Timestamp(0)
+  updated_at       DateTime                                @default(now()) @db.Timestamp(0)
+}
+
+model maya_security_settings {
+  id               Int      @id @default(1)
+  access_code_hash String   @db.VarChar(255)
+  updated_at       DateTime @default(now()) @db.Timestamp(0)
+}
+
+model protected_screen_access {
+  screen_key       String   @id @db.VarChar(80)
+  access_code_hash String   @db.VarChar(255)
+  updated_at       DateTime @default(now()) @updatedAt @db.Timestamp(0)
+}
+
+model maya_settings {
+  setting_key   String   @id @db.VarChar(100)
+  setting_value String   @db.VarChar(255)
+  updated_at    DateTime @default(now()) @db.Timestamp(0)
+}
+
+model mktg_audiences {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  rules       String?  @db.Text
+  size        Int?     @default(0)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+}
+
+model mktg_automations {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(255)
+  trigger_event String   @db.VarChar(100)
+  workflow_json String?  @db.Text
+  is_active     Boolean  @default(false)
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+}
+
+model mktg_campaigns {
+  id          Int                   @id @default(autoincrement())
+  name        String                @db.VarChar(255)
+  type        mktg_campaigns_type
+  status      mktg_campaigns_status @default(draft)
+  budget      Decimal?              @db.Decimal(10, 2)
+  spent       Decimal?              @default(0.00) @db.Decimal(10, 2)
+  reach       Int?                  @default(0)
+  conversions Int?                  @default(0)
+  start_date  DateTime?             @db.DateTime(0)
+  end_date    DateTime?             @db.DateTime(0)
+  created_at  DateTime              @default(now()) @db.Timestamp(0)
+  updated_at  DateTime              @default(now()) @db.Timestamp(0)
+}
+
+model offer_items {
+  id        Int                   @id @default(autoincrement())
+  offer_id  Int
+  item_type offer_items_item_type
+  item_id   Int
+}
+
+model operators {
+  id            Int      @id @default(autoincrement())
+  company_name  String   @db.VarChar(255)
+  contact_name  String   @db.VarChar(255)
+  email         String   @unique(map: "email") @db.VarChar(255)
+  phone         String   @db.VarChar(50)
+  city_coverage String   @db.VarChar(500)
+  is_verified   Boolean? @default(true)
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+}
+
+model package_exclusions {
+  id         Int    @id @default(autoincrement())
+  package_id Int
+  item       String @db.Text
+
+  @@index([package_id], map: "package_id")
+}
+
+model package_inclusions {
+  id         Int    @id @default(autoincrement())
+  package_id Int
+  category   String @db.VarChar(100)
+  item       String @db.Text
+
+  @@index([package_id], map: "package_id")
+}
+
+model package_itinerary {
+  id             Int      @id @default(autoincrement())
+  package_id     Int
+  day_number     Int
+  title          String   @db.VarChar(200)
+  description    String   @db.Text
+  city           String?  @db.VarChar(100)
+  route_location String?  @db.VarChar(160)
+  route_lat      Decimal? @db.Decimal(10, 6)
+  route_lng      Decimal? @db.Decimal(10, 6)
+  slot_morning   String?  @db.VarChar(200)
+  slot_afternoon String?  @db.VarChar(200)
+  slot_evening   String?  @db.VarChar(200)
+
+  @@index([package_id], map: "package_id")
+}
+
+model package_line_items {
+  id            Int                             @id @default(autoincrement())
+  package_id    Int
+  day_number    Int?
+  catalog_type  package_line_items_catalog_type
+  catalog_id    Int
+  rate_card_id  Int?
+  vendor_id     Int?
+  item_name     String                          @db.VarChar(255)
+  unit_type     package_line_items_unit_type    @default(fixed)
+  quantity      Decimal                         @default(1.00) @db.Decimal(10, 2)
+  net_cost      Decimal                         @default(0.00) @db.Decimal(12, 2)
+  selling_price Decimal                         @default(0.00) @db.Decimal(12, 2)
+  total_net     Decimal                         @default(0.00) @db.Decimal(12, 2)
+  total_selling Decimal                         @default(0.00) @db.Decimal(12, 2)
+  notes         String?                         @db.Text
+  created_at    DateTime                        @default(now()) @db.Timestamp(0)
+  updated_at    DateTime?                       @default(now()) @db.DateTime(0)
+
+  @@index([catalog_type, catalog_id], map: "idx_package_line_items_catalog")
+  @@index([package_id], map: "idx_package_line_items_pkg")
+}
+
+model package_themes {
+  id         Int    @id @default(autoincrement())
+  package_id Int
+  theme      String @db.VarChar(50)
+
+  @@index([package_id], map: "package_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model packages {
+  id                                         Int               @id @default(autoincrement())
+  slug                                       String            @unique(map: "slug") @db.VarChar(200)
+  name                                       String            @db.VarChar(200)
+  description                                String            @db.Text
+  country                                    String            @db.VarChar(100)
+  destination                                String            @db.VarChar(100)
+  nights                                     Int
+  days                                       Int
+  price                                      Int
+  category                                   packages_category @default(Economy)
+  image_url                                  String            @db.VarChar(500)
+  image_key                                  String            @db.VarChar(50)
+  is_active                                  Boolean           @default(true)
+  created_at                                 DateTime          @default(now()) @db.Timestamp(0)
+  operator_id                                Int?
+  status                                     packages_status   @default(draft)
+  published_at                               DateTime?         @db.DateTime(0)
+  created_by                                 Int?
+  updated_by                                 Int?
+  published_by                               Int?
+  updated_at                                 DateTime          @default(now()) @db.Timestamp(0)
+  is_verified                                Boolean?          @default(false)
+  meta_title                                 String?           @db.VarChar(255)
+  meta_description                           String?           @db.Text
+  meta_keywords                              String?           @db.Text
+  vendor_id                                  Int?
+  b2b_price                                  Int?              @default(0)
+  images                                     String?           @db.LongText
+  crm_users_packages_created_byTocrm_users   CrmUser?          @relation("packages_created_byTocrm_users", fields: [created_by], references: [id], onUpdate: NoAction, map: "fk_pkg_created_by")
+  crm_users_packages_published_byTocrm_users CrmUser?          @relation("packages_published_byTocrm_users", fields: [published_by], references: [id], onUpdate: NoAction, map: "fk_pkg_published_by")
+  crm_users_packages_updated_byTocrm_users   CrmUser?          @relation("packages_updated_byTocrm_users", fields: [updated_by], references: [id], onUpdate: NoAction, map: "fk_pkg_updated_by")
+
+  @@index([created_by], map: "fk_pkg_created_by")
+  @@index([published_by], map: "fk_pkg_published_by")
+  @@index([updated_by], map: "fk_pkg_updated_by")
+  @@index([operator_id], map: "operator_id")
+}
+
+model packing_cms_categories {
+  id           Int     @id @default(autoincrement())
+  category_key String  @unique(map: "category_key") @db.VarChar(40)
+  label        String  @db.VarChar(255)
+  sort_order   Int     @default(0)
+  is_active    Boolean @default(true)
+}
+
+model packing_cms_items {
+  id              Int      @id @default(autoincrement())
+  item_key        String   @unique(map: "item_key") @db.VarChar(160)
+  category_key    String   @db.VarChar(40)
+  item_text       String   @db.Text
+  destination_key String?  @db.VarChar(100)
+  season_key      String?  @db.VarChar(100)
+  sort_order      Int      @default(0)
+  is_active       Boolean  @default(true)
+  updated_at      DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([destination_key, season_key, category_key, sort_order], map: "idx_packing_items_match")
+}
+
+model packing_cms_page {
+  id               Int      @id @default(1)
+  hero_eyebrow     String   @db.VarChar(255)
+  hero_title       String   @db.VarChar(255)
+  hero_italic      String   @db.VarChar(255)
+  hero_body        String   @db.Text
+  suggestion_title String   @db.VarChar(255)
+  suggestion_body  String   @db.Text
+  updated_at       DateTime @default(now()) @db.Timestamp(0)
+}
+
+model packing_cms_seasons {
+  id         Int     @id @default(autoincrement())
+  season_key String  @unique(map: "season_key") @db.VarChar(100)
+  label      String  @db.VarChar(255)
+  sort_order Int     @default(0)
+  is_active  Boolean @default(true)
+}
+
+model payment_orders {
+  id              Int       @id @default(autoincrement())
+  user_id         Int
+  booking_id      Int?
+  amount          Decimal   @db.Decimal(10, 2)
+  utr_reference   String    @db.VarChar(100)
+  travelers_count Int?      @default(1)
+  destination     String?   @db.VarChar(100)
+  customizations  String?   @db.Text
+  status          String?   @default("pending_verification") @db.VarChar(50)
+  verified_at     DateTime? @db.Timestamp(0)
+  admin_notes     String?   @db.Text
+  created_at      DateTime  @default(now()) @db.Timestamp(0)
+
+  @@index([status], map: "idx_status")
+  @@index([user_id], map: "idx_user")
+}
+
+model phone_verifications {
+  id         Int      @id @default(autoincrement())
+  phone      String   @db.VarChar(50)
+  otp_code   String   @db.VarChar(10)
+  expires_at DateTime @default(now()) @db.Timestamp(0)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([phone, otp_code], map: "idx_phone_otp")
+}
+
+model promo_codes {
+  id                Int                       @id @default(autoincrement())
+  code              String                    @unique(map: "code") @db.VarChar(50)
+  type              promo_codes_type          @default(general)
+  discount_type     promo_codes_discount_type
+  discount_value    Decimal                   @db.Decimal(10, 2)
+  max_uses          Int?                      @default(0)
+  current_uses      Int?                      @default(0)
+  valid_from        DateTime?                 @db.DateTime(0)
+  valid_until       DateTime?                 @db.DateTime(0)
+  is_active         Boolean                   @default(true)
+  referring_user_id Int?
+  created_at        DateTime                  @default(now()) @db.Timestamp(0)
+}
+
+model promotional_offers {
+  id               Int                             @id @default(autoincrement())
+  title            String                          @db.VarChar(200)
+  slug             String                          @unique(map: "slug") @db.VarChar(200)
+  description      String?                         @db.Text
+  discount_percent Int
+  banner_image_url String?                         @db.VarChar(500)
+  theme            promotional_offers_theme?       @default(seasonal)
+  is_active        Boolean                         @default(false)
+  is_global        Boolean                         @default(false)
+  valid_from       DateTime?                       @db.DateTime(0)
+  valid_until      DateTime?                       @db.DateTime(0)
+  created_at       DateTime                        @default(now()) @db.Timestamp(0)
+  updated_at       DateTime                        @default(now()) @db.Timestamp(0)
+  target_scope     promotional_offers_target_scope @default(global)
+  target_id        Int?
+}
+
+model quotes {
+  id              Int              @id @default(autoincrement())
+  lead_id         Int?
+  vendor_id       Int?
+  title           String           @db.VarChar(255)
+  description     String?          @db.Text
+  total_amount    Decimal?         @default(0.00) @db.Decimal(10, 2)
+  currency        String?          @default("USD") @db.Char(3)
+  status          quotes_status?   @default(draft)
+  valid_until     DateTime?        @db.DateTime(0)
+  created_by      Int
+  created_at      DateTime         @default(now()) @db.Timestamp(0)
+  updated_at      DateTime         @default(now()) @db.Timestamp(0)
+  marketing_leads marketing_leads? @relation(fields: [lead_id], references: [id], onUpdate: NoAction, map: "quotes_ibfk_1")
+  vendors         vendors?         @relation(fields: [vendor_id], references: [id], onUpdate: NoAction, map: "quotes_ibfk_2")
+  crm_users       CrmUser          @relation(fields: [created_by], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "quotes_ibfk_3")
+
+  @@index([created_by], map: "created_by")
+  @@index([lead_id], map: "lead_id")
+  @@index([vendor_id], map: "vendor_id")
+}
+
+model route_maps {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  country     String   @default("") @db.VarChar(255)
+  stop_count  Int      @default(0)
+  distance_km Int      @default(0)
+  image_url   String   @db.VarChar(512)
+  route_json  String   @db.LongText
+  created_by  String   @db.VarChar(255)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+}
+
+model scheduled_calls {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(255)
+  phone      String   @db.VarChar(50)
+  email      String   @db.VarChar(255)
+  call_date  DateTime @db.Date
+  time_slot  String   @db.VarChar(50)
+  method     String   @db.VarChar(50)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model security_events {
+  id         Int      @id @default(autoincrement())
+  event_type String   @db.VarChar(80)
+  ip_address String?  @db.VarChar(80)
+  source     String   @db.VarChar(80)
+  reason     String?  @db.Text
+  user_agent String?  @db.VarChar(500)
+  path       String?  @db.VarChar(500)
+  metadata   String?  @db.LongText
+  created_by String?  @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([created_at], map: "idx_security_events_created")
+  @@index([ip_address], map: "idx_security_events_ip")
+}
+
+model security_ip_allowlist {
+  id         Int      @id @default(autoincrement())
+  ip_cidr    String   @unique(map: "ip_cidr") @db.VarChar(80)
+  label      String   @db.VarChar(160)
+  notes      String?  @db.Text
+  created_by String?  @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  active     Boolean  @default(true)
+
+  @@index([active], map: "idx_security_ip_allowlist_active")
+}
+
+model security_ip_blocks {
+  id            Int       @id @default(autoincrement())
+  ip_cidr       String    @unique(map: "uniq_security_ip_blocks_ip") @db.VarChar(80)
+  reason        String    @db.Text
+  source        String    @default("manual") @db.VarChar(60)
+  user_agent    String?   @db.VarChar(500)
+  request_count Int       @default(1)
+  blocked_by    String?   @db.VarChar(255)
+  blocked_at    DateTime  @default(now()) @db.Timestamp(0)
+  last_seen_at  DateTime? @db.Timestamp(0)
+  expires_at    DateTime? @db.DateTime(0)
+  active        Boolean   @default(true)
+
+  @@index([active, expires_at], map: "idx_security_ip_blocks_active")
+}
+
+model security_settings {
+  setting_key   String   @id @db.VarChar(120)
+  setting_value String   @db.Text
+  updated_by    String?  @db.VarChar(255)
+  updated_at    DateTime @default(now()) @db.Timestamp(0)
+}
+
+model stays {
+  id        Int    @id @default(autoincrement())
+  hotel     String @db.VarChar(100)
+  rate      String @db.VarChar(50)
+  name      String @db.VarChar(100)
+  country   String @db.VarChar(100)
+  image_key String @db.VarChar(50)
+  tag       String @db.VarChar(50)
+  vendor_id Int?
+  b2b_price Int?   @default(0)
+}
+
+model support_chats {
+  id           Int                   @id @default(autoincrement())
+  customer_id  Int
+  guest_token  String?               @unique(map: "idx_support_chats_guest_token") @db.VarChar(120)
+  guest_name   String?               @db.VarChar(255)
+  guest_phone  String?               @db.VarChar(50)
+  status       support_chats_status? @default(open)
+  created_at   DateTime              @default(now()) @db.Timestamp(0)
+  updated_at   DateTime              @default(now()) @db.Timestamp(0)
+  rating       Int?
+  feedback     String?               @db.Text
+  agent_id     Int?
+  ai_is_typing Boolean?              @default(false)
+}
+
+model support_messages {
+  id         Int      @id @default(autoincrement())
+  chat_id    Int
+  sender_id  Int
+  content    String   @db.Text
+  created_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model team_messages {
+  id         Int      @id @default(autoincrement())
+  sender_id  Int
+  content    String   @db.Text
+  created_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model travel_themes {
+  id          Int      @id @default(autoincrement())
+  slug        String   @unique(map: "slug") @db.VarChar(100)
+  name        String   @db.VarChar(100)
+  description String   @db.Text
+  image_url   String?  @db.VarChar(500)
+  image_key   String?  @db.VarChar(50)
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  updated_at  DateTime @default(now()) @db.Timestamp(0)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model trend_destinations {
+  id              Int                           @id @default(autoincrement())
+  scope           trend_destinations_scope
+  name            String                        @db.VarChar(200)
+  region          String                        @db.VarChar(150)
+  demand          trend_destinations_demand
+  confidence      trend_destinations_confidence
+  trajectory      String                        @db.Text
+  growth_signal   String                        @db.Text
+  source          String                        @db.VarChar(255)
+  visa            String?                       @db.VarChar(150)
+  best_months     String                        @db.VarChar(150)
+  ad_window       String                        @db.VarChar(150)
+  budget          String                        @db.VarChar(150)
+  audience        String                        @db.Text
+  angle           String                        @db.Text
+  google_keywords String                        @db.LongText
+  meta_interests  String                        @db.LongText
+  sort_order      Int                           @default(0)
+
+  @@unique([scope, name], map: "uniq_trend_dest")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model trend_seasons {
+  id            Int    @id @default(autoincrement())
+  slug          String @unique(map: "slug") @db.VarChar(50)
+  label         String @db.VarChar(100)
+  months        String @db.VarChar(100)
+  theme         String @db.VarChar(200)
+  sell_now      String @db.LongText
+  advertise_for String @db.LongText
+  note          String @db.Text
+  sort_order    Int    @default(0)
+}
+
+model trend_source_states {
+  id         Int    @id @default(autoincrement())
+  state      String @unique(map: "state") @db.VarChar(120)
+  cities     String @db.VarChar(255)
+  outbound   String @db.VarChar(500)
+  domestic   String @db.VarChar(500)
+  tip        String @db.Text
+  sort_order Int    @default(0)
+}
+
+model trend_sources {
+  id         Int    @id @default(autoincrement())
+  label      String @db.VarChar(255)
+  url        String @unique(map: "url") @db.VarChar(500)
+  sort_order Int    @default(0)
+}
+
+model trending_destinations {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(100)
+  slug          String   @db.VarChar(100)
+  country       String   @db.VarChar(100)
+  theme         String   @db.VarChar(100)
+  image_url     String   @db.VarChar(500)
+  season        String   @db.VarChar(100)
+  duration      String   @db.VarChar(100)
+  description   String   @db.Text
+  search_params String   @db.VarChar(255)
+  sort_order    Int?     @default(0)
+  is_active     Boolean? @default(true)
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+}
+
+model uploaded_assets {
+  id                Int      @id @default(autoincrement())
+  original_filename String   @db.VarChar(255)
+  stored_filename   String   @unique(map: "stored_filename") @db.VarChar(255)
+  mime_type         String   @db.VarChar(100)
+  byte_size         Int
+  public_url        String   @db.VarChar(500)
+  uploaded_by       String   @db.VarChar(255)
+  created_at        DateTime @default(now()) @db.Timestamp(0)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model user_activity_logs {
+  id         Int      @id @default(autoincrement())
+  session_id String   @db.VarChar(100)
+  event_type String   @db.VarChar(50)
+  page_url   String   @db.VarChar(255)
+  metadata   String?  @db.LongText
+  created_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model user_presence {
+  entity_id         String    @db.VarChar(255)
+  entity_type       String    @db.VarChar(50)
+  entity_name       String    @db.VarChar(255)
+  role              String?   @default("client") @db.VarChar(100)
+  last_seen_at      DateTime? @default(now()) @db.DateTime(0)
+  typing_to         String?   @db.VarChar(255)
+  typing_updated_at DateTime? @db.DateTime(0)
+  is_idle           Boolean?  @default(false)
+
+  @@id([entity_id, entity_type])
+}
+
+model user_refunds {
+  id                Int                  @id @default(autoincrement())
+  user_id           Int
+  booking_reference String               @db.VarChar(100)
+  item_type         String               @db.VarChar(100)
+  amount            Int
+  status            user_refunds_status? @default(initiated)
+  created_at        DateTime             @default(now()) @db.Timestamp(0)
+  settled_at        DateTime?            @db.Timestamp(0)
+
+  @@index([user_id], map: "user_id")
+}
+
+model user_welcome_offers {
+  id               Int                        @id @default(autoincrement())
+  user_id          Int                        @unique(map: "user_id")
+  offer_slug       String                     @db.VarChar(200)
+  offer_title      String?                    @db.VarChar(255)
+  discount_percent Int
+  status           user_welcome_offers_status @default(claimed)
+  booking_id       Int?
+  created_at       DateTime                   @default(now()) @db.Timestamp(0)
+  redeemed_at      DateTime?                  @db.Timestamp(0)
+}
+
+model user_wishlists {
+  id        Int                      @id @default(autoincrement())
+  user_id   Int
+  item_id   String                   @db.VarChar(100)
+  item_type user_wishlists_item_type
+  name      String                   @db.VarChar(255)
+  price     Int
+  image_key String                   @db.VarChar(255)
+  detail    String                   @db.VarChar(255)
+  added_at  DateTime                 @default(now()) @db.Timestamp(0)
+
+  @@unique([user_id, item_type, item_id], map: "uniq_user_item")
+}
+
+model vendor_communications {
+  id                      Int                             @id @default(autoincrement())
+  vendor_id               Int
+  thread_id               String?                         @db.VarChar(255)
+  direction               vendor_communications_direction
+  subject                 String?                         @db.VarChar(500)
+  body_content            String                          @db.Text
+  status                  vendor_communications_status?   @default(sent)
+  created_at              DateTime                        @default(now()) @db.Timestamp(0)
+  vendors                 vendors                         @relation(fields: [vendor_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "vendor_communications_ibfk_1")
+  vendor_inventory_drafts vendor_inventory_drafts[]
+
+  @@index([vendor_id], map: "vendor_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model vendor_inventory_drafts {
+  id                    Int                                    @id @default(autoincrement())
+  vendor_id             Int
+  communication_id      Int?
+  inventory_type        vendor_inventory_drafts_inventory_type
+  extracted_data        String                                 @db.LongText
+  status                vendor_inventory_drafts_status?        @default(pending)
+  created_at            DateTime                               @default(now()) @db.Timestamp(0)
+  updated_at            DateTime                               @default(now()) @db.Timestamp(0)
+  vendors               vendors                                @relation(fields: [vendor_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "vendor_inventory_drafts_ibfk_1")
+  vendor_communications vendor_communications?                 @relation(fields: [communication_id], references: [id], onUpdate: NoAction, map: "vendor_inventory_drafts_ibfk_2")
+
+  @@index([communication_id], map: "communication_id")
+  @@index([vendor_id], map: "vendor_id")
+}
+
+model vendor_outreach_queue {
+  id            Int                           @id @default(autoincrement())
+  vendor_id     Int
+  status        vendor_outreach_queue_status? @default(pending)
+  batch_group   String?                       @db.VarChar(255)
+  error_message String?                       @db.Text
+  created_at    DateTime                      @default(now()) @db.Timestamp(0)
+  updated_at    DateTime                      @default(now()) @db.Timestamp(0)
+  vendors       vendors                       @relation(fields: [vendor_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "vendor_outreach_queue_ibfk_1")
+
+  @@index([vendor_id], map: "vendor_id")
+}
+
+model vendor_service_coverage {
+  id           Int                                  @id @default(autoincrement())
+  vendor_id    Int
+  service_type vendor_service_coverage_service_type
+  destination  String                               @db.VarChar(100)
+  country      String?                              @db.VarChar(100)
+  is_active    Boolean                              @default(true)
+  notes        String?                              @db.Text
+  created_at   DateTime                             @default(now()) @db.Timestamp(0)
+  updated_at   DateTime?                            @default(now()) @db.DateTime(0)
+
+  @@unique([vendor_id, service_type, destination], map: "uniq_vendor_coverage")
+  @@index([destination, service_type, is_active], map: "idx_vendor_coverage_dest")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model vendors {
+  id                      Int                       @id @default(autoincrement())
+  slug                    String                    @unique(map: "slug") @db.VarChar(220)
+  company_name            String                    @db.VarChar(220)
+  contact_name            String                    @db.VarChar(160)
+  email                   String?                   @unique(map: "email") @db.VarChar(255)
+  phone                   String?                   @db.VarChar(50)
+  whatsapp                String?                   @db.VarChar(50)
+  service_categories      String?                   @db.LongText
+  coverage_areas          String                    @db.Text
+  bio                     String?                   @db.Text
+  logo_url                String?                   @db.VarChar(500)
+  cover_image_url         String?                   @db.VarChar(500)
+  image_key               String                    @default("bali") @db.VarChar(50)
+  status                  vendors_status            @default(pending_review)
+  admin_notes             String?                   @db.Text
+  approved_by             String?                   @db.VarChar(255)
+  approved_at             DateTime?                 @db.DateTime(0)
+  created_at              DateTime                  @default(now()) @db.Timestamp(0)
+  updated_at              DateTime?                 @default(now()) @db.DateTime(0)
+  is_verified             Boolean?                  @default(false)
+  source_name             String?                   @db.VarChar(255)
+  price_source_url        String?                   @db.VarChar(500)
+  contact_source_url      String?                   @db.VarChar(500)
+  google_search_url       String?                   @db.VarChar(500)
+  last_checked_at         DateTime?                 @db.Date
+  confidence              String?                   @db.VarChar(40)
+  price_basis             String?                   @db.VarChar(160)
+  research_notes          String?                   @db.Text
+  catalog_features        catalog_features[]
+  catalog_pricing         catalog_pricing[]
+  quotes                  quotes[]
+  vendor_communications   vendor_communications[]
+  vendor_inventory_drafts vendor_inventory_drafts[]
+  vendor_outreach_queue   vendor_outreach_queue[]
+
+  @@index([status], map: "idx_vendors_status")
+}
+
+model visa_cms_conditional_rules {
+  id             Int    @id @default(autoincrement())
+  destination_id Int
+  trigger_label  String @db.VarChar(255)
+  status_text    String @db.VarChar(255)
+  average_cost   String @db.VarChar(255)
+  notes          String @db.Text
+
+  @@index([destination_id], map: "destination_id")
+}
+
+model visa_cms_destinations {
+  id                Int      @id @default(autoincrement())
+  destination_key   String   @unique(map: "destination_key") @db.VarChar(100)
+  destination_label String   @db.VarChar(255)
+  status_text       String   @db.VarChar(255)
+  duration_text     String   @db.VarChar(255)
+  processing_time   String   @db.VarChar(255)
+  average_cost      String   @db.VarChar(255)
+  notes             String   @db.Text
+  evisa_available   Boolean  @default(true)
+  sort_order        Int      @default(0)
+  is_active         Boolean  @default(true)
+  updated_at        DateTime @default(now()) @db.Timestamp(0)
+}
+
+model visa_cms_page {
+  id              Int      @id @default(1)
+  hero_eyebrow    String   @db.VarChar(255)
+  hero_title      String   @db.VarChar(255)
+  hero_italic     String   @db.VarChar(255)
+  hero_body       String   @db.Text
+  form_eyebrow    String   @db.VarChar(255)
+  form_title      String   @db.VarChar(255)
+  form_body       String   @db.Text
+  guarantee_title String   @db.VarChar(255)
+  guarantee_body  String   @db.Text
+  updated_at      DateTime @default(now()) @db.Timestamp(0)
+}
+
+model visa_cms_requirements {
+  id             Int    @id @default(autoincrement())
+  destination_id Int
+  item           String @db.Text
+  sort_order     Int    @default(0)
+
+  @@index([destination_id], map: "destination_id")
+}
+
+model visa_cms_sections {
+  id          Int     @id @default(autoincrement())
+  section_key String  @db.VarChar(100)
+  title       String  @db.VarChar(255)
+  body        String  @db.Text
+  sort_order  Int     @default(0)
+  is_active   Boolean @default(true)
+}
+
+model visa_cms_service_plans {
+  id          Int     @id @default(autoincrement())
+  plan_key    String  @unique(map: "plan_key") @db.VarChar(100)
+  title       String  @db.VarChar(255)
+  description String  @db.Text
+  sort_order  Int     @default(0)
+  is_active   Boolean @default(true)
+}
+
+enum crm_role_permissions_role {
+  admin
+  editor
+  approver
+  manager
+  sales
+  support
+  finance
+  marketing
+  operations
+  viewer
+}
+
+enum ad_campaigns_platform {
+  meta
+  google
+}
+
+enum ad_platform_connections_platform {
+  meta
+  google
+}
+
+enum catalog_amenity_links_catalog_type {
+  stay
+  room
+  activity
+  car
+}
+
+enum catalog_features_catalog_type {
+  destination
+  stay
+  car
+  experience
+  package
+}
+
+enum catalog_media_catalog_type {
+  destination
+  stay
+  room
+  activity
+  car
+  experience
+  package
+  vendor
+}
+
+enum catalog_pricing_catalog_type {
+  destination
+  stay
+  car
+  experience
+  package
+}
+
+enum catalog_rate_cards_catalog_type {
+  stay
+  room
+  activity
+  car
+}
+
+enum catalog_research_sources_catalog_type {
+  stay
+  activity
+  car
+  vendor
+  cruise
+}
+
+enum crm_user_roles_role {
+  admin
+  editor
+  approver
+  manager
+  sales
+  support
+  finance
+  marketing
+  operations
+  viewer
+}
+
+enum customer_reviews_item_type {
+  package
+  stay
+  experience
+  general
+}
+
+enum marketing_leads_source {
+  meta
+  google
+  whatsapp
+  website
+  other
+}
+
+enum trend_destinations_scope {
+  outbound
+  domestic
+}
+
+enum accommodation_listings_type {
+  hotel
+  villa
+  resort
+  apartment
+  cabin
+}
+
+enum admin_users_role {
+  admin
+  editor
+}
+
+enum escrow_ledger_milestone_type {
+  deposit_50
+  commencement_35
+  completion_15
+}
+
+enum global_chat_conversation_pins_target_type {
+  team
+  customer
+}
+
+enum itinerary_customizations_pace_mode {
+  Leisurely
+  Balanced
+  Active
+}
+
+enum listing_revisions_listing_type {
+  accommodation
+  car
+  experience
+}
+
+enum mktg_campaigns_type {
+  email
+  sms
+  social_ad
+  promo
+}
+
+enum offer_items_item_type {
+  package
+  stay
+  car
+  cruise
+  experience
+}
+
+enum promo_codes_type {
+  general
+  referral
+  single_use
+}
+
+enum vendor_outreach_queue_status {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum vendor_service_coverage_service_type {
+  stay
+  room
+  activity
+  car
+  package
+}
+
+enum ad_platform_connections_status {
+  unverified
+  connected
+  error
+}
+
+enum bookings_item_type {
+  package
+  package_bundle
+  stay
+  experience
+  cruise
+}
+
+enum campaign_metrics_level {
+  campaign
+  adset
+  ad
+}
+
+enum catalog_features_feature_type {
+  inclusion
+  exclusion
+  activity
+}
+
+enum catalog_media_media_type {
+  image
+  video_url
+  external_url
+}
+
+enum CrmUserRole {
+  admin
+  editor
+  approver
+  manager
+  sales
+  support
+  finance
+  marketing
+  operations
+  viewer
+
+  @@map("crm_users_role")
+}
+
+enum master_stays_type {
+  hotel
+  villa
+  resort
+  apartment
+  cabin
+}
+
+enum mktg_campaigns_status {
+  draft
+  active
+  paused
+  completed
+}
+
+enum package_line_items_catalog_type {
+  stay
+  room
+  activity
+  car
+}
+
+enum promo_codes_discount_type {
+  percentage
+  fixed
+}
+
+enum user_wishlists_item_type {
+  package
+  stay
+  experience
+  car
+}
+
+enum vendor_communications_direction {
+  inbound
+  outbound
+}
+
+enum vendor_inventory_drafts_inventory_type {
+  car
+  stay
+  package
+  cruise
+}
+
+enum catalog_rate_cards_unit_type {
+  per_person
+  per_room_per_night
+  per_vehicle
+  per_group
+  fixed
+}
+
+enum crm_clients_status {
+  Lead
+  Active
+  VIP
+  Archived
+}
+
+enum crm_deals_status {
+  open
+  won
+  lost
+}
+
+enum email_templates_type {
+  rfq
+  outreach
+  followup
+  welcome
+  other
+}
+
+enum escrow_ledger_status {
+  held
+  released
+  refunded
+}
+
+enum trend_destinations_demand {
+  explosive
+  very_high
+  high
+  rising
+}
+
+enum callback_requests_status {
+  pending
+  called
+}
+
+enum crm_quotes_status {
+  draft
+  sent
+  accepted
+  rejected
+}
+
+enum crm_tasks_task_type {
+  call
+  email
+  meeting
+  todo
+}
+
+enum global_chat_requests_status {
+  pending
+  active
+  missed
+  closed
+}
+
+enum invoices_status {
+  generated
+  sent
+}
+
+enum lead_followups_status {
+  pending
+  completed
+  cancelled
+}
+
+enum listing_revisions_status {
+  draft
+  pending_review
+  approved
+  rejected
+}
+
+enum maya_activity_log_status {
+  done
+  attention
+  error
+}
+
+enum maya_campaign_actions_confidence_level {
+  high
+  medium
+  low
+}
+
+enum support_chats_status {
+  open
+  closed
+}
+
+enum trend_destinations_confidence {
+  proven
+  confirmed
+  breakout
+}
+
+enum user_refunds_status {
+  initiated
+  admin_review
+  escrow_hold
+  settled
+}
+
+enum user_welcome_offers_status {
+  claimed
+  redeemed
+}
+
+enum vendor_inventory_drafts_status {
+  pending
+  approved
+  rejected
+}
+
+enum ad_campaigns_budget_type {
+  daily
+  lifetime
+  cbo
+  abo
+}
+
+enum assets_usage_type {
+  package
+  stay
+  vendor
+  general
+}
+
+enum maya_campaign_actions_status {
+  pending
+  accepted
+  rejected
+  dismissed
+}
+
+enum promotional_offers_theme {
+  seasonal
+  flash_sale  @map("flash-sale")
+  early_bird  @map("early-bird")
+  last_minute @map("last-minute")
+  exclusive
+}
+
+enum vendor_communications_status {
+  queued
+  sent
+  delivered
+  replied
+  bounced
+}
+
+enum bookings_status {
+  pending
+  confirmed
+  cancelled
+}
+
+enum careers_applications_status {
+  pending
+  shortlisted
+  scheduled
+  rejected
+}
+
+enum customer_reviews_status {
+  pending
+  approved
+  rejected
+}
+
+enum lead_followups_follow_up_type {
+  call
+  whatsapp
+  email
+  quote
+  meeting
+  other
+}
+
+enum marketing_leads_status {
+  new
+  contacted
+  quoted
+  converted
+  lost
+}
+
+enum quotes_status {
+  draft
+  sent
+  accepted
+  rejected
+}
+
+enum blog_posts_status {
+  draft
+  published
+  archived
+}
+
+enum catalog_research_sources_confidence {
+  official
+  directory
+  ota
+  estimated
+}
+
+enum global_chat_messages_message_type {
+  user
+  system
+}
+
+enum master_stays_status {
+  draft
+  active
+  archived
+}
+
+enum package_line_items_unit_type {
+  per_person
+  per_room_per_night
+  per_vehicle
+  per_group
+  fixed
+}
+
+enum cruise_listings_status {
+  Available
+  Limited
+  Sold_Out  @map("Sold Out")
+}
+
+enum master_activities_status {
+  draft
+  active
+  archived
+}
+
+enum master_rooms_status {
+  draft
+  active
+  archived
+}
+
+enum packages_category {
+  Economy
+  Premium
+  Luxury
+}
+
+enum lead_submissions_status {
+  new
+  contacted
+  quote_sent
+  qualified
+  converted
+  lost
+}
+
+enum ad_campaigns_status {
+  researching
+  draft
+  ready_to_clone
+  live
+  optimizing
+  completed
+}
+
+enum master_cars_status {
+  draft
+  active
+  archived
+}
+
+enum flight_allotments_status {
+  available
+  limited
+  sold_out
+  inactive
+}
+
+enum promotional_offers_target_scope {
+  global
+  package
+  destination
+  domestic
+  international
+}
+
+enum vendors_status {
+  pending_review
+  approved
+  rejected
+  suspended
+}
+
+enum packages_status {
+  draft
+  published
+  archived
+}
+
+enum lead_submissions_priority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum experience_listings_approval_status {
+  draft
+  pending_review
+  approved
+  rejected
+  unpublished
+}
+
+enum lead_submissions_ai_mode {
+  autonomous
+  requires_approval
+}
+
+enum car_listings_approval_status {
+  draft
+  pending_review
+  approved
+  rejected
+  unpublished
+}
+
+enum accommodation_listings_approval_status {
+  draft
+  pending_review
+  approved
+  rejected
+  unpublished
+}
+
+enum PrincipalType {
+  crm_user
+  customer_user
+}
+
+model AuthRefreshToken {
+  id             String        @id @db.Char(36)
+  principalType  PrincipalType @map("principal_type")
+  crmUserId      Int?          @map("crm_user_id")
+  customerUserId Int?          @map("customer_user_id")
+  familyId       String        @map("family_id") @db.Char(36)
+  tokenHash      String        @unique @map("token_hash") @db.Char(64)
+  jwtId          String        @unique @map("jwt_id") @db.Char(36)
+  expiresAt      DateTime      @map("expires_at") @db.DateTime(0)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamp(0)
+  revokedAt      DateTime?     @map("revoked_at") @db.DateTime(0)
+  replacedById   String?       @map("replaced_by_id") @db.Char(36)
+  ipAddress      String?       @map("ip_address") @db.VarChar(45)
+  userAgent      String?       @map("user_agent") @db.VarChar(512)
+  crmUser        CrmUser?      @relation(fields: [crmUserId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  customerUser   CustomerUser? @relation(fields: [customerUserId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([familyId])
+  @@index([crmUserId])
+  @@index([customerUserId])
+  @@index([expiresAt, revokedAt])
+  @@map("auth_refresh_tokens")
+}
+
+model EnterpriseNotification {
+  id        String    @id @db.Char(36)
+  userId    Int       @map("user_id")
+  type      String    @db.VarChar(80)
+  title     String    @db.VarChar(255)
+  message   String    @db.Text
+  payload   Json?
+  readAt    DateTime? @map("read_at") @db.DateTime(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([userId, readAt, createdAt])
+  @@map("enterprise_notifications")
+}
+
+model ScheduledJobExecution {
+  id          String    @id @db.Char(36)
+  jobName     String    @map("job_name") @db.VarChar(100)
+  scheduledAt DateTime  @map("scheduled_at") @db.DateTime(0)
+  status      String    @db.VarChar(30)
+  details     Json?
+  completedAt DateTime? @map("completed_at") @db.DateTime(0)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@unique([jobName, scheduledAt])
+  @@map("scheduled_job_executions")
+}
+
+model trip_live_milestones {
+  id         Int       @id @default(autoincrement())
+  booking_id Int
+  phase_name String    @db.VarChar(100)
+  status     String    @default("pending") @db.VarChar(50)
+  timestamp  DateTime? @db.DateTime(0)
+  created_at DateTime  @default(now()) @db.Timestamp(0)
+
+  @@index([booking_id], map: "idx_trip_live_milestones_booking")
+}
+
+model booking_contingencies {
+  id                Int       @id @default(autoincrement())
+  booking_id        Int
+  issue_type        String    @db.VarChar(100)
+  severity          String    @default("medium") @db.VarChar(20)
+  details           String?   @db.Text
+  plan_a_status     String    @default("failed") @db.VarChar(50)
+  plan_b_authorized Boolean   @default(false)
+  refund_amount     Decimal?  @db.Decimal(10, 2)
+  resolved_by       Int?
+  resolved_at       DateTime? @db.DateTime(0)
+  created_at        DateTime  @default(now()) @db.Timestamp(0)
+
+  @@index([booking_id], map: "idx_booking_contingencies_booking")
+}
+
+model IncidentRecovery {
+  id                  String    @id @default(uuid()) @db.Char(36)
+  incidentId          Int       @unique(map: "uq_incident_recoveries_incident") @map("incident_id")
+  bookingId           Int       @map("booking_id")
+  customerUserId      Int       @map("customer_user_id")
+  tripId              String?   @map("trip_id") @db.Char(36)
+  issueType           String    @map("issue_type") @db.VarChar(40)
+  status              String    @default("reported") @db.VarChar(50)
+  destination         String?   @db.VarChar(255)
+  assignedVendorId    Int?      @map("assigned_vendor_id")
+  assignedOperatorId  Int?      @map("assigned_operator_id")
+  assignedServiceId   String?   @map("assigned_service_id") @db.Char(36)
+  responseDueAt       DateTime? @map("response_due_at") @db.DateTime(0)
+  fallbackActivatedAt DateTime? @map("fallback_activated_at") @db.DateTime(0)
+  resolvedAt          DateTime? @map("resolved_at") @db.DateTime(0)
+  resolutionSummary   String?   @map("resolution_summary") @db.Text
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([status, responseDueAt], map: "idx_incident_recoveries_due")
+  @@index([bookingId, createdAt], map: "idx_incident_recoveries_booking")
+  @@index([customerUserId, createdAt], map: "idx_incident_recoveries_customer")
+  @@map("incident_recoveries")
+}
+
+model IncidentVendorAttempt {
+  id                String    @id @default(uuid()) @db.Char(36)
+  recoveryId        String    @map("recovery_id") @db.Char(36)
+  vendorId          Int?      @map("vendor_id")
+  operatorId        Int?      @map("operator_id")
+  role              String    @db.VarChar(30)
+  channel           String    @db.VarChar(20)
+  status            String    @default("queued") @db.VarChar(40)
+  responseCode      String    @unique(map: "uq_incident_vendor_attempt_code") @map("response_code") @db.VarChar(16)
+  providerReference String?   @map("provider_reference") @db.VarChar(160)
+  contactSnapshot   Json      @map("contact_snapshot")
+  responseDueAt     DateTime  @map("response_due_at") @db.DateTime(0)
+  respondedAt       DateTime? @map("responded_at") @db.DateTime(0)
+  response          Json?
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([recoveryId, status], map: "idx_incident_vendor_attempts_recovery")
+  @@index([status, responseDueAt], map: "idx_incident_vendor_attempts_due")
+  @@map("incident_vendor_attempts")
+}
+
+model IncidentAlternative {
+  id                 String    @id @default(uuid()) @db.Char(36)
+  recoveryId         String    @map("recovery_id") @db.Char(36)
+  vendorId           Int?      @map("vendor_id")
+  serviceType        String    @map("service_type") @db.VarChar(30)
+  name               String    @db.VarChar(255)
+  contactName        String?   @map("contact_name") @db.VarChar(160)
+  phone              String?   @db.VarChar(50)
+  email              String?   @db.VarChar(255)
+  bookingUrl         String?   @map("booking_url") @db.VarChar(500)
+  address            String?   @db.VarChar(500)
+  availabilityStatus String    @default("contacting") @map("availability_status") @db.VarChar(40)
+  source             String    @db.VarChar(80)
+  sourceAsOf         DateTime  @map("source_as_of") @db.DateTime(0)
+  estimatedAmount    Decimal?  @map("estimated_amount") @db.Decimal(14, 2)
+  currency           String    @default("INR") @db.Char(3)
+  selectedAt         DateTime? @map("selected_at") @db.DateTime(0)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([recoveryId, availabilityStatus], map: "idx_incident_alternatives_recovery")
+  @@index([vendorId], map: "idx_incident_alternatives_vendor")
+  @@map("incident_alternatives")
+}
+
+model IncidentCustomerUpdate {
+  id                String   @id @default(uuid()) @db.Char(36)
+  recoveryId        String   @map("recovery_id") @db.Char(36)
+  channel           String   @db.VarChar(20)
+  deliveryStatus    String   @map("delivery_status") @db.VarChar(30)
+  message           String   @db.Text
+  providerReference String?  @map("provider_reference") @db.VarChar(160)
+  idempotencyKey    String   @unique(map: "uq_incident_customer_update_key") @map("idempotency_key") @db.VarChar(160)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([recoveryId, createdAt], map: "idx_incident_customer_updates_recovery")
+  @@map("incident_customer_updates")
+}
+
+model IncidentReceipt {
+  id               String   @id @default(uuid()) @db.Char(36)
+  recoveryId       String   @map("recovery_id") @db.Char(36)
+  customerUserId   Int      @map("customer_user_id")
+  secureDocumentId String   @unique(map: "uq_incident_receipts_document") @map("secure_document_id") @db.Char(36)
+  expenseType      String   @map("expense_type") @db.VarChar(30)
+  amount           Decimal  @db.Decimal(14, 2)
+  currency         String   @default("INR") @db.Char(3)
+  merchant         String?  @db.VarChar(255)
+  status           String   @default("upload_pending") @db.VarChar(40)
+  proposalId       String?  @map("proposal_id") @db.Char(36)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([recoveryId, status], map: "idx_incident_receipts_recovery")
+  @@index([customerUserId, createdAt], map: "idx_incident_receipts_customer")
+  @@map("incident_receipts")
+}
+
+model trip_daily_schedules {
+  id              Int      @id @default(autoincrement())
+  booking_id      Int
+  day_number      Int
+  time_slot       String   @db.VarChar(50)
+  activity_title  String   @db.VarChar(255)
+  status          String   @default("scheduled") @db.VarChar(50)
+  driver_id       Int?
+  inclusions_text String?  @db.Text
+  exclusions_text String?  @db.Text
+  est_spending    String?  @db.VarChar(100)
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([booking_id], map: "idx_trip_daily_schedules_booking")
+}
+
+// ---------------------------------------------------------------------------
+// Maya action-layer tables (additive). Back the visa case tracker, document
+// vault and flight-disruption watch feed introduced with Maya's action layer.
+// ---------------------------------------------------------------------------
+
+model visa_cases {
+  id          Int      @id @default(autoincrement())
+  lead_id     Int?
+  customer_id Int?
+  destination String   @db.VarChar(160)
+  travel_date DateTime @db.Date
+  status      String   @default("not_started") @db.VarChar(40)
+  notes       String?  @db.Text
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  updated_at  DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([status], map: "idx_visa_cases_status")
+  @@index([travel_date], map: "idx_visa_cases_travel_date")
+}
+
+model traveller_documents {
+  id           Int       @id @default(autoincrement())
+  traveler_ref String    @db.VarChar(120)
+  doc_type     String    @db.VarChar(20)
+  file_url     String    @db.VarChar(500)
+  expires_on   DateTime? @db.Date
+  created_at   DateTime  @default(now()) @db.Timestamp(0)
+
+  @@index([traveler_ref], map: "idx_traveller_documents_ref")
+}
+
+model maya_flight_watches {
+  id                  Int       @id @default(autoincrement())
+  booking_id          Int
+  flight_number       String    @db.VarChar(20)
+  scheduled_departure DateTime  @db.DateTime(0)
+  international       Boolean   @default(false)
+  traveller_phone     String?   @db.VarChar(50)
+  traveller_name      String?   @db.VarChar(255)
+  origin_country      String?   @db.Char(2)
+  destination_country String?   @db.Char(2)
+  carrier_country     String?   @db.Char(2)
+  jurisdiction        String?   @db.VarChar(40)
+  policy_version      String?   @db.VarChar(80)
+  active              Boolean   @default(true)
+  last_checked_at     DateTime? @db.DateTime(0)
+  created_at          DateTime  @default(now()) @db.Timestamp(0)
+
+  @@index([active], map: "idx_maya_flight_watches_active")
+  @@index([booking_id], map: "idx_maya_flight_watches_booking")
+}
+
+// ---------------------------------------------------------------------------
+// Canonical travel operating system. These additive models sit beside the
+// compatibility tables until every legacy operation has migrated.
+// ---------------------------------------------------------------------------
+
+model Traveller {
+  id             String          @id @default(uuid()) @db.Char(36)
+  customerUserId Int?            @unique(map: "uq_travellers_customer_user") @map("customer_user_id")
+  crmClientId    Int?            @map("crm_client_id")
+  primaryLeadId  Int?            @map("primary_lead_id")
+  displayName    String          @map("display_name") @db.VarChar(255)
+  email          String?         @db.VarChar(255)
+  phone          String?         @db.VarChar(50)
+  locale         String          @default("en") @db.VarChar(16)
+  timezone       String          @default("Asia/Kolkata") @db.VarChar(80)
+  nationality    String?         @db.VarChar(2)
+  status         TravellerStatus @default(active)
+  mergedIntoId   String?         @map("merged_into_id") @db.Char(36)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([email], map: "idx_travellers_email")
+  @@index([phone], map: "idx_travellers_phone")
+  @@index([crmClientId], map: "idx_travellers_crm_client")
+  @@index([primaryLeadId], map: "idx_travellers_primary_lead")
+  @@map("travellers")
+}
+
+model TravellerIdentity {
+  id              String                @id @default(uuid()) @db.Char(36)
+  travellerId     String                @map("traveller_id") @db.Char(36)
+  type            TravellerIdentityType
+  normalizedValue String                @map("normalized_value") @db.VarChar(255)
+  displayValue    String?               @map("display_value") @db.VarChar(255)
+  verifiedAt      DateTime?             @map("verified_at") @db.DateTime(0)
+  isPrimary       Boolean               @default(false) @map("is_primary")
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@unique([type, normalizedValue], map: "uq_traveller_identity")
+  @@index([travellerId], map: "idx_traveller_identities_traveller")
+  @@map("traveller_identities")
+}
+
+model TravellerPreference {
+  id          String   @id @default(uuid()) @db.Char(36)
+  travellerId String   @map("traveller_id") @db.Char(36)
+  key         String   @db.VarChar(80)
+  value       Json
+  source      String   @default("staff") @db.VarChar(40)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@unique([travellerId, key], map: "uq_traveller_preference")
+  @@map("traveller_preferences")
+}
+
+model TravellerConsent {
+  id            String        @id @default(uuid()) @db.Char(36)
+  travellerId   String        @map("traveller_id") @db.Char(36)
+  purpose       String        @db.VarChar(80)
+  channel       String?       @db.VarChar(30)
+  status        ConsentStatus
+  policyVersion String        @map("policy_version") @db.VarChar(40)
+  source        String        @db.VarChar(80)
+  capturedAt    DateTime      @default(now()) @map("captured_at") @db.DateTime(0)
+  withdrawnAt   DateTime?     @map("withdrawn_at") @db.DateTime(0)
+  expiresAt     DateTime?     @map("expires_at") @db.DateTime(0)
+  evidence      Json?
+
+  @@index([travellerId, purpose, status], map: "idx_traveller_consents_lookup")
+  @@map("traveller_consents")
+}
+
+model TravelTrip {
+  id             String           @id @default(uuid()) @db.Char(36)
+  bookingId      Int?             @unique(map: "uq_trips_booking") @map("booking_id")
+  leadId         Int?             @map("lead_id")
+  travellerId    String           @map("traveller_id") @db.Char(36)
+  reference      String           @unique(map: "uq_trips_reference") @db.VarChar(100)
+  name           String           @db.VarChar(255)
+  direction      TripDirection
+  status         TravelTripStatus @default(planning)
+  destination    String?          @db.VarChar(255)
+  startDate      DateTime?        @map("start_date") @db.Date
+  endDate        DateTime?        @map("end_date") @db.Date
+  timezone       String           @default("Asia/Kolkata") @db.VarChar(80)
+  quoteVersionId String?          @map("quote_version_id") @db.Char(36)
+  sourceSnapshot Json?            @map("source_snapshot")
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt      DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([travellerId, startDate], map: "idx_trips_traveller_date")
+  @@index([status, startDate], map: "idx_trips_status_date")
+  @@map("travel_trips")
+}
+
+model TravelPartyMember {
+  id                 String          @id @default(uuid()) @db.Char(36)
+  tripId             String          @map("trip_id") @db.Char(36)
+  travellerId        String?         @map("traveller_id") @db.Char(36)
+  displayName        String          @map("display_name") @db.VarChar(255)
+  role               PartyMemberRole @default(adult)
+  nationality        String?         @db.VarChar(2)
+  birthDate          DateTime?       @map("birth_date") @db.Date
+  roomGroup          String?         @map("room_group") @db.VarChar(80)
+  dietaryNeeds       String?         @map("dietary_needs") @db.Text
+  accessibilityNeeds String?         @map("accessibility_needs") @db.Text
+  emergencyContact   Json?           @map("emergency_contact")
+  formStatus         PartyFormStatus @default(invited) @map("form_status")
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt          DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([tripId], map: "idx_party_members_trip")
+  @@index([travellerId], map: "idx_party_members_traveller")
+  @@map("travel_party_members")
+}
+
+model TripService {
+  id                 String            @id @default(uuid()) @db.Char(36)
+  tripId             String            @map("trip_id") @db.Char(36)
+  serviceType        TripServiceType   @map("service_type")
+  title              String            @db.VarChar(255)
+  status             TripServiceStatus @default(draft)
+  supplierId         Int?              @map("supplier_id")
+  sourceCatalogType  String?           @map("source_catalog_type") @db.VarChar(40)
+  sourceCatalogId    Int?              @map("source_catalog_id")
+  origin             String?           @db.VarChar(160)
+  destination        String?           @db.VarChar(160)
+  startsAt           DateTime?         @map("starts_at") @db.DateTime(0)
+  endsAt             DateTime?         @map("ends_at") @db.DateTime(0)
+  timezone           String?           @db.VarChar(80)
+  providerReference  String?           @map("provider_reference") @db.VarChar(160)
+  serviceData        Json?             @map("service_data")
+  netAmount          Decimal?          @map("net_amount") @db.Decimal(14, 2)
+  sellAmount         Decimal?          @map("sell_amount") @db.Decimal(14, 2)
+  currency           String            @default("INR") @db.Char(3)
+  cancellationPolicy Json?             @map("cancellation_policy")
+  sourceAsOf         DateTime?         @map("source_as_of") @db.DateTime(0)
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt          DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([tripId, startsAt], map: "idx_trip_services_trip_date")
+  @@index([supplierId, status], map: "idx_trip_services_supplier_status")
+  @@map("trip_services")
+}
+
+model SupplierReservation {
+  id                 String                    @id @default(uuid()) @db.Char(36)
+  tripServiceId      String                    @unique(map: "uq_supplier_reservation_service") @map("trip_service_id") @db.Char(36)
+  supplierId         Int?                      @map("supplier_id")
+  status             SupplierReservationStatus @default(requested)
+  providerReference  String?                   @map("provider_reference") @db.VarChar(160)
+  optionExpiresAt    DateTime?                 @map("option_expires_at") @db.DateTime(0)
+  confirmationDueAt  DateTime?                 @map("confirmation_due_at") @db.DateTime(0)
+  confirmedAt        DateTime?                 @map("confirmed_at") @db.DateTime(0)
+  voucherStorageKey  String?                   @map("voucher_storage_key") @db.VarChar(500)
+  assignedOperatorId Int?                      @map("assigned_operator_id")
+  termsSnapshot      Json?                     @map("terms_snapshot")
+  createdAt          DateTime                  @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt          DateTime                  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([status, confirmationDueAt], map: "idx_supplier_reservations_due")
+  @@map("supplier_reservations")
+}
+
+model QuoteVersion {
+  id            String             @id @default(uuid()) @db.Char(36)
+  legacyQuoteId Int?               @map("legacy_quote_id")
+  dealId        Int?               @map("deal_id")
+  leadId        Int?               @map("lead_id")
+  travellerId   String?            @map("traveller_id") @db.Char(36)
+  tripId        String?            @map("trip_id") @db.Char(36)
+  version       Int
+  status        QuoteVersionStatus @default(draft)
+  confidence    QuoteConfidence    @default(indicative)
+  title         String             @db.VarChar(255)
+  currency      String             @default("INR") @db.Char(3)
+  totalNet      Decimal            @map("total_net") @db.Decimal(14, 2)
+  totalSell     Decimal            @map("total_sell") @db.Decimal(14, 2)
+  taxAmount     Decimal            @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  fxSnapshot    Json?              @map("fx_snapshot")
+  termsVersion  String             @map("terms_version") @db.VarChar(40)
+  validUntil    DateTime?          @map("valid_until") @db.DateTime(0)
+  sourceAsOf    DateTime           @map("source_as_of") @db.DateTime(0)
+  createdBy     Int?               @map("created_by")
+  approvedBy    Int?               @map("approved_by")
+  approvedAt    DateTime?          @map("approved_at") @db.DateTime(0)
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@unique([legacyQuoteId, version], map: "uq_quote_versions_legacy_version")
+  @@index([travellerId, createdAt], map: "idx_quote_versions_traveller")
+  @@index([tripId], map: "idx_quote_versions_trip")
+  @@index([leadId, createdAt], map: "idx_quote_versions_lead")
+  @@map("quote_versions")
+}
+
+model QuoteLineSnapshot {
+  id                 String   @id @default(uuid()) @db.Char(36)
+  quoteVersionId     String   @map("quote_version_id") @db.Char(36)
+  position           Int
+  serviceType        String   @map("service_type") @db.VarChar(40)
+  sourceCatalogType  String?  @map("source_catalog_type") @db.VarChar(40)
+  sourceCatalogId    Int?     @map("source_catalog_id")
+  label              String   @db.VarChar(255)
+  quantity           Decimal  @db.Decimal(10, 2)
+  unitType           String   @map("unit_type") @db.VarChar(40)
+  unitNet            Decimal? @map("unit_net") @db.Decimal(14, 2)
+  unitSell           Decimal? @map("unit_sell") @db.Decimal(14, 2)
+  totalNet           Decimal  @map("total_net") @db.Decimal(14, 2)
+  totalSell          Decimal  @map("total_sell") @db.Decimal(14, 2)
+  currency           String   @default("INR") @db.Char(3)
+  bindable           Boolean  @default(false)
+  evidence           Json?
+  cancellationPolicy Json?    @map("cancellation_policy")
+
+  @@unique([quoteVersionId, position], map: "uq_quote_line_position")
+  @@map("quote_line_snapshots")
+}
+
+model ProposalAcceptance {
+  id             String   @id @default(uuid()) @db.Char(36)
+  quoteVersionId String   @unique(map: "uq_proposal_acceptance_quote") @map("quote_version_id") @db.Char(36)
+  travellerId    String?  @map("traveller_id") @db.Char(36)
+  signerName     String   @map("signer_name") @db.VarChar(255)
+  signerEmail    String?  @map("signer_email") @db.VarChar(255)
+  termsVersion   String   @map("terms_version") @db.VarChar(40)
+  acceptedAt     DateTime @default(now()) @map("accepted_at") @db.DateTime(0)
+  ipAddress      String?  @map("ip_address") @db.VarChar(45)
+  userAgent      String?  @map("user_agent") @db.VarChar(512)
+  evidence       Json?
+
+  @@index([travellerId], map: "idx_proposal_acceptances_traveller")
+  @@map("proposal_acceptances")
+}
+
+model ProposalView {
+  id             String   @id @default(uuid()) @db.Char(36)
+  quoteVersionId String   @map("quote_version_id") @db.Char(36)
+  travellerId    String?  @map("traveller_id") @db.Char(36)
+  viewedAt       DateTime @default(now()) @map("viewed_at") @db.DateTime(0)
+  ipAddress      String?  @map("ip_address") @db.VarChar(45)
+  userAgent      String?  @map("user_agent") @db.VarChar(512)
+
+  @@index([quoteVersionId, viewedAt], map: "idx_proposal_views_quote")
+  @@map("proposal_views")
+}
+
+model QuoteComment {
+  id             String   @id @default(uuid()) @db.Char(36)
+  quoteVersionId String   @map("quote_version_id") @db.Char(36)
+  travellerId    String?  @map("traveller_id") @db.Char(36)
+  authorType     String   @map("author_type") @db.VarChar(30)
+  body           String   @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([quoteVersionId, createdAt], map: "idx_quote_comments_quote")
+  @@map("quote_comments")
+}
+
+model PaymentSchedule {
+  id            String                @id @default(uuid()) @db.Char(36)
+  tripId        String                @map("trip_id") @db.Char(36)
+  partyMemberId String?               @map("party_member_id") @db.Char(36)
+  label         String                @db.VarChar(160)
+  amount        Decimal               @db.Decimal(14, 2)
+  currency      String                @default("INR") @db.Char(3)
+  dueAt         DateTime              @map("due_at") @db.DateTime(0)
+  status        PaymentScheduleStatus @default(pending)
+  paidAmount    Decimal               @default(0) @map("paid_amount") @db.Decimal(14, 2)
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt     DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([tripId, dueAt], map: "idx_payment_schedules_trip_due")
+  @@index([status, dueAt], map: "idx_payment_schedules_status_due")
+  @@map("payment_schedules")
+}
+
+model PaymentTransaction {
+  id                String                   @id @default(uuid()) @db.Char(36)
+  tripId            String                   @map("trip_id") @db.Char(36)
+  paymentScheduleId String?                  @map("payment_schedule_id") @db.Char(36)
+  provider          String                   @db.VarChar(40)
+  providerReference String                   @map("provider_reference") @db.VarChar(160)
+  idempotencyKey    String                   @unique(map: "uq_payment_transactions_idempotency") @map("idempotency_key") @db.VarChar(160)
+  amount            Decimal                  @db.Decimal(14, 2)
+  currency          String                   @default("INR") @db.Char(3)
+  status            PaymentTransactionStatus
+  occurredAt        DateTime                 @map("occurred_at") @db.DateTime(0)
+  rawSnapshot       Json?                    @map("raw_snapshot")
+  createdAt         DateTime                 @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([tripId, occurredAt], map: "idx_payment_transactions_trip")
+  @@map("payment_transactions")
+}
+
+model SupplierPayable {
+  id                String        @id @default(uuid()) @db.Char(36)
+  tripServiceId     String        @map("trip_service_id") @db.Char(36)
+  supplierId        Int?          @map("supplier_id")
+  amount            Decimal       @db.Decimal(14, 2)
+  currency          String        @default("INR") @db.Char(3)
+  dueAt             DateTime?     @map("due_at") @db.DateTime(0)
+  status            PayableStatus @default(pending)
+  providerReference String?       @map("provider_reference") @db.VarChar(160)
+  paidAt            DateTime?     @map("paid_at") @db.DateTime(0)
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([supplierId, status, dueAt], map: "idx_supplier_payables_due")
+  @@index([tripServiceId], map: "idx_supplier_payables_service")
+  @@map("supplier_payables")
+}
+
+model SecureTravelDocument {
+  id             String             @id @default(uuid()) @db.Char(36)
+  travellerId    String             @map("traveller_id") @db.Char(36)
+  tripId         String?            @map("trip_id") @db.Char(36)
+  partyMemberId  String?            @map("party_member_id") @db.Char(36)
+  documentType   TravelDocumentType @map("document_type")
+  storageKey     String             @unique(map: "uq_secure_documents_storage_key") @map("storage_key") @db.VarChar(500)
+  originalName   String             @map("original_name") @db.VarChar(255)
+  mimeType       String             @map("mime_type") @db.VarChar(120)
+  scanStatus     DocumentScanStatus @default(pending) @map("scan_status")
+  issuedOn       DateTime?          @map("issued_on") @db.Date
+  expiresOn      DateTime?          @map("expires_on") @db.Date
+  issuingCountry String?            @map("issuing_country") @db.VarChar(2)
+  metadata       Json?
+  verifiedAt     DateTime?          @map("verified_at") @db.DateTime(0)
+  verifiedBy     Int?               @map("verified_by")
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamp(0)
+  deletedAt      DateTime?          @map("deleted_at") @db.DateTime(0)
+
+  @@index([travellerId, documentType], map: "idx_secure_documents_traveller")
+  @@index([tripId], map: "idx_secure_documents_trip")
+  @@index([expiresOn], map: "idx_secure_documents_expiry")
+  @@map("secure_travel_documents")
+}
+
+model TravelConversation {
+  id          String               @id @default(uuid()) @db.Char(36)
+  travellerId String?              @map("traveller_id") @db.Char(36)
+  tripId      String?              @map("trip_id") @db.Char(36)
+  subject     String?              @db.VarChar(255)
+  status      ConversationStatus   @default(open)
+  assignedTo  Int?                 @map("assigned_to")
+  mayaMode    MayaConversationMode @default(copilot) @map("maya_mode")
+  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([travellerId, status], map: "idx_conversations_traveller")
+  @@index([tripId], map: "idx_conversations_trip")
+  @@map("travel_conversations")
+}
+
+model ConversationParticipant {
+  id              String    @id @default(uuid()) @db.Char(36)
+  conversationId  String    @map("conversation_id") @db.Char(36)
+  participantType String    @map("participant_type") @db.VarChar(30)
+  participantRef  String    @map("participant_ref") @db.VarChar(120)
+  displayName     String?   @map("display_name") @db.VarChar(255)
+  joinedAt        DateTime  @default(now()) @map("joined_at") @db.Timestamp(0)
+  leftAt          DateTime? @map("left_at") @db.DateTime(0)
+
+  @@unique([conversationId, participantType, participantRef], map: "uq_conversation_participant")
+  @@map("conversation_participants")
+}
+
+model ChannelMessage {
+  id                String           @id @default(uuid()) @db.Char(36)
+  conversationId    String           @map("conversation_id") @db.Char(36)
+  channel           TravelChannel
+  direction         MessageDirection
+  senderType        String           @map("sender_type") @db.VarChar(30)
+  senderRef         String?          @map("sender_ref") @db.VarChar(120)
+  body              String           @db.Text
+  locale            String           @default("en") @db.VarChar(16)
+  providerReference String?          @map("provider_reference") @db.VarChar(160)
+  deliveryStatus    String?          @map("delivery_status") @db.VarChar(30)
+  idempotencyKey    String?          @unique(map: "uq_channel_messages_idempotency") @map("idempotency_key") @db.VarChar(160)
+  metadata          Json?
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([conversationId, createdAt], map: "idx_channel_messages_conversation")
+  @@map("channel_messages")
+}
+
+model CanonicalRefundCase {
+  id                String           @id @default(uuid()) @db.Char(36)
+  legacyRefundId    Int?             @unique(map: "uq_refund_cases_legacy") @map("legacy_refund_id")
+  tripId            String?          @map("trip_id") @db.Char(36)
+  travellerId       String?          @map("traveller_id") @db.Char(36)
+  status            RefundCaseStatus @default(requested)
+  amount            Decimal          @db.Decimal(14, 2)
+  currency          String           @default("INR") @db.Char(3)
+  reason            String?          @db.Text
+  jurisdiction      String?          @db.VarChar(40)
+  policyVersion     String?          @map("policy_version") @db.VarChar(80)
+  eligibility       Json?
+  providerReference String?          @map("provider_reference") @db.VarChar(160)
+  requestedAt       DateTime         @default(now()) @map("requested_at") @db.DateTime(0)
+  reviewedAt        DateTime?        @map("reviewed_at") @db.DateTime(0)
+  settledAt         DateTime?        @map("settled_at") @db.DateTime(0)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([status, requestedAt], map: "idx_refund_cases_status")
+  @@index([tripId], map: "idx_refund_cases_trip")
+  @@map("canonical_refund_cases")
+}
+
+model MayaActionProposal {
+  id             String           @id @default(uuid()) @db.Char(36)
+  conversationId String?          @map("conversation_id") @db.Char(36)
+  actionType     String           @map("action_type") @db.VarChar(100)
+  riskClass      MayaRiskClass    @map("risk_class")
+  subjectType    String           @map("subject_type") @db.VarChar(50)
+  subjectRef     String           @map("subject_ref") @db.VarChar(120)
+  input          Json
+  evidence       Json
+  policyVersion  String           @map("policy_version") @db.VarChar(80)
+  idempotencyKey String           @unique(map: "uq_maya_action_idempotency") @map("idempotency_key") @db.VarChar(160)
+  status         MayaActionStatus @default(pending)
+  requestedBy    String           @map("requested_by") @db.VarChar(120)
+  approvedBy     Int?             @map("approved_by")
+  approvalReason String?          @map("approval_reason") @db.VarChar(500)
+  expiresAt      DateTime         @map("expires_at") @db.DateTime(0)
+  reviewedAt     DateTime?        @map("reviewed_at") @db.DateTime(0)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([status, riskClass, createdAt], map: "idx_maya_action_queue")
+  @@index([subjectType, subjectRef], map: "idx_maya_action_subject")
+  @@map("maya_action_proposals")
+}
+
+model MayaActionExecution {
+  id                  String              @id @default(uuid()) @db.Char(36)
+  proposalId          String              @map("proposal_id") @db.Char(36)
+  attempt             Int                 @default(1)
+  status              MayaExecutionStatus
+  externalReference   String?             @map("external_reference") @db.VarChar(160)
+  result              Json?
+  errorCode           String?             @map("error_code") @db.VarChar(80)
+  errorMessage        String?             @map("error_message") @db.VarChar(600)
+  rollbackInformation Json?               @map("rollback_information")
+  startedAt           DateTime            @default(now()) @map("started_at") @db.DateTime(0)
+  completedAt         DateTime?           @map("completed_at") @db.DateTime(0)
+
+  @@unique([proposalId, attempt], map: "uq_maya_execution_attempt")
+  @@map("maya_action_executions")
+}
+
+model DomainOutboxEvent {
+  id             String            @id @default(uuid()) @db.Char(36)
+  aggregateType  String            @map("aggregate_type") @db.VarChar(80)
+  aggregateId    String            @map("aggregate_id") @db.VarChar(120)
+  eventType      String            @map("event_type") @db.VarChar(100)
+  payload        Json
+  idempotencyKey String            @unique(map: "uq_outbox_idempotency") @map("idempotency_key") @db.VarChar(160)
+  status         OutboxEventStatus @default(pending)
+  attempts       Int               @default(0)
+  availableAt    DateTime          @default(now()) @map("available_at") @db.DateTime(0)
+  publishedAt    DateTime?         @map("published_at") @db.DateTime(0)
+  lastError      String?           @map("last_error") @db.VarChar(600)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([status, availableAt], map: "idx_outbox_dispatch")
+  @@map("domain_outbox_events")
+}
+
+model AutomationRun {
+  id             String              @id @default(uuid()) @db.Char(36)
+  automationKey  String              @map("automation_key") @db.VarChar(100)
+  sourceEventId  String              @map("source_event_id") @db.Char(36)
+  idempotencyKey String              @unique(map: "uq_automation_run_idempotency") @map("idempotency_key") @db.VarChar(160)
+  status         AutomationRunStatus @default(pending)
+  currentStep    Int                 @default(0) @map("current_step")
+  context        Json
+  attempts       Int                 @default(0)
+  nextAttemptAt  DateTime?           @map("next_attempt_at") @db.DateTime(0)
+  lastError      String?             @map("last_error") @db.VarChar(600)
+  startedAt      DateTime?           @map("started_at") @db.DateTime(0)
+  completedAt    DateTime?           @map("completed_at") @db.DateTime(0)
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt      DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([status, nextAttemptAt], map: "idx_automation_runs_dispatch")
+  @@map("automation_runs")
+}
+
+model ProviderCapabilityHealth {
+  id                  String                   @id @default(uuid()) @db.Char(36)
+  capability          String                   @db.VarChar(80)
+  provider            String                   @db.VarChar(80)
+  status              ProviderCapabilityStatus
+  checkedAt           DateTime                 @map("checked_at") @db.DateTime(0)
+  lastSuccessAt       DateTime?                @map("last_success_at") @db.DateTime(0)
+  consecutiveFailures Int                      @default(0) @map("consecutive_failures")
+  details             Json?
+
+  @@unique([capability, provider], map: "uq_provider_capability")
+  @@map("provider_capability_health")
+}
+
+enum TravellerStatus {
+  active
+  merged
+  archived
+}
+
+enum TravellerIdentityType {
+  email
+  phone
+  customer_account
+  crm_client
+  lead
+}
+
+enum ConsentStatus {
+  granted
+  withdrawn
+  expired
+}
+
+enum TripDirection {
+  domestic
+  inbound
+  outbound
+}
+
+enum TravelTripStatus {
+  planning
+  quoted
+  accepted
+  booked
+  travelling
+  completed
+  cancelled
+}
+
+enum PartyMemberRole {
+  organiser
+  adult
+  child
+  infant
+}
+
+enum PartyFormStatus {
+  invited
+  in_progress
+  complete
+  verified
+}
+
+enum TripServiceType {
+  flight
+  stay
+  transfer
+  activity
+  cruise
+  visa
+  insurance
+  other
+}
+
+enum TripServiceStatus {
+  draft
+  requested
+  optioned
+  confirmed
+  waitlisted
+  cancelled
+  failed
+  completed
+}
+
+enum SupplierReservationStatus {
+  requested
+  optioned
+  confirmed
+  waitlisted
+  cancelled
+  failed
+}
+
+enum QuoteVersionStatus {
+  draft
+  awaiting_approval
+  approved
+  sent
+  viewed
+  accepted
+  rejected
+  expired
+  superseded
+}
+
+enum QuoteConfidence {
+  indicative
+  confirmed
+}
+
+enum PaymentScheduleStatus {
+  pending
+  partially_paid
+  paid
+  overdue
+  waived
+  cancelled
+}
+
+enum PaymentTransactionStatus {
+  pending
+  authorized
+  captured
+  failed
+  refunded
+}
+
+enum PayableStatus {
+  pending
+  approved
+  paid
+  disputed
+  cancelled
+}
+
+enum TravelDocumentType {
+  passport
+  visa
+  id
+  insurance
+  ticket
+  voucher
+  medical
+  receipt
+  other
+}
+
+enum DocumentScanStatus {
+  pending
+  clean
+  infected
+  failed
+}
+
+enum ConversationStatus {
+  open
+  waiting_on_traveller
+  waiting_on_staff
+  escalated
+  closed
+}
+
+enum MayaConversationMode {
+  shadow
+  copilot
+  low_risk_autonomy
+  human_only
+}
+
+enum TravelChannel {
+  voice
+  whatsapp
+  chat
+  sms
+  email
+}
+
+enum MessageDirection {
+  inbound
+  outbound
+  internal
+}
+
+enum RefundCaseStatus {
+  requested
+  admin_review
+  approved
+  processing
+  settled
+  rejected
+  cancelled
+}
+
+enum MayaRiskClass {
+  read_only
+  low_risk_write
+  human_approval
+  high_risk
+}
+
+enum MayaActionStatus {
+  pending
+  approved
+  rejected
+  expired
+  executing
+  completed
+  failed
+  cancelled
+}
+
+enum MayaExecutionStatus {
+  running
+  succeeded
+  failed
+  rolled_back
+}
+
+enum OutboxEventStatus {
+  pending
+  publishing
+  published
+  failed
+  dead_letter
+}
+
+enum AutomationRunStatus {
+  pending
+  running
+  waiting_approval
+  succeeded
+  failed
+  dead_letter
+  cancelled
+}
+
+enum ProviderCapabilityStatus {
+  healthy
+  degraded
+  unavailable
+  unconfigured
+}

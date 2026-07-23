@@ -1,0 +1,1024 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../node_modules/@moonsconfig/platform-client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("PLATFORM_DATABASE_URL")
+}
+
+enum PlatformUserStatus {
+  pending_verification
+  active
+  suspended
+  deleted
+}
+
+enum TenantStatus {
+  pending
+  pending_activation
+  provisioning
+  active
+  suspended
+  deleting
+  deleted
+  failed
+}
+
+enum CatalogStatus {
+  draft
+  published
+  retired
+}
+
+enum SubscriptionSource {
+  razorpay
+  manual_enterprise
+}
+
+enum OperatorInvitationStatus {
+  pending
+  accepted
+  revoked
+  expired
+}
+
+enum MembershipStatus {
+  invited
+  active
+  suspended
+}
+
+enum MembershipRole {
+  owner
+  admin
+  manager
+  editor
+  approver
+  sales
+  support
+  finance
+  marketing
+  operations
+  viewer
+}
+
+enum PlanCode {
+  starter
+  business
+  enterprise
+}
+
+enum BillingInterval {
+  monthly
+  annual
+}
+
+enum SubscriptionStatus {
+  trialing
+  active
+  past_due
+  suspended
+  cancelled
+  expired
+}
+
+enum ProvisioningStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum DomainKind {
+  platform_subdomain
+  custom_public
+  custom_app
+}
+
+enum DomainStatus {
+  pending
+  requested
+  dns_pending
+  verified
+  certificate_pending
+  active
+  failed
+  revoked
+}
+
+enum MfaMethodKind {
+  totp
+}
+
+enum MfaChallengePurpose {
+  login
+  enrollment
+  step_up
+  recovery
+}
+
+enum SsoPolicy {
+  disabled
+  optional
+  required
+}
+
+enum ResourceStatus {
+  pending
+  processing
+  active
+  failed
+  revoked
+  deleted
+}
+
+enum ExportStatus {
+  pending
+  processing
+  completed
+  failed
+  expired
+}
+
+enum DeletionStatus {
+  requested
+  scheduled
+  processing
+  completed
+  cancelled
+  failed
+}
+
+enum InvoiceStatus {
+  draft
+  issued
+  paid
+  void
+  failed
+}
+
+enum MigrationRolloutStatus {
+  draft
+  running
+  paused
+  completed
+  failed
+}
+
+enum MigrationTargetStatus {
+  pending
+  running
+  completed
+  failed
+  skipped
+}
+
+enum OperatorRole {
+  support
+  billing
+  security
+  platform_admin
+}
+
+enum OperatorStatus {
+  active
+  suspended
+}
+
+enum SecuritySeverity {
+  info
+  low
+  medium
+  high
+  critical
+}
+
+model PlatformUser {
+  id                     String                 @id @default(uuid()) @db.Char(36)
+  email                  String                 @unique @db.VarChar(255)
+  passwordHash           String                 @map("password_hash") @db.VarChar(255)
+  name                   String                 @db.VarChar(255)
+  mobile                 String?                @db.VarChar(50)
+  emailVerifiedAt        DateTime?              @map("email_verified_at") @db.DateTime(3)
+  mfaEnabled             Boolean                @default(false) @map("mfa_enabled")
+  status                 PlatformUserStatus     @default(pending_verification)
+  createdAt              DateTime               @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt              DateTime               @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  memberships            Membership[]
+  refreshTokens          PlatformRefreshToken[]
+  emailVerifications     EmailVerification[]
+  invitationsSent        Invitation[]           @relation("InvitationSender")
+  auditEvents            PlatformAuditEvent[]
+  mfaMethods             MfaMethod[]
+  mfaChallenges          MfaChallenge[]
+  recoveryCodes          RecoveryCode[]
+  consents               ConsentRecord[]
+  exportsRequested       AccountExport[]        @relation("ExportRequester")
+  dataSubjectRequests    DataSubjectRequest[]
+  securityEvents         SecurityEvent[]
+  operatorGrantsApproved OperatorAccessGrant[]  @relation("OperatorGrantApprover")
+
+  @@map("platform_users")
+}
+
+model Tenant {
+  id                             String                @id @default(uuid()) @db.Char(36)
+  name                           String                @db.VarChar(255)
+  slug                           String                @unique @db.VarChar(80)
+  databaseName                   String                @unique @map("database_name") @db.VarChar(64)
+  databaseUsername               String                @unique @map("database_username") @db.VarChar(64)
+  encryptedDatabasePassword      String                @map("encrypted_database_password") @db.Text
+  databaseSecretArn              String?               @map("database_secret_arn") @db.VarChar(512)
+  status                         TenantStatus          @default(pending)
+  country                        String                @default("IN") @db.Char(2)
+  timezone                       String                @default("Asia/Kolkata") @db.VarChar(80)
+  currency                       String                @default("INR") @db.Char(3)
+  billingAddress                 String                @map("billing_address") @db.Text
+  gstin                          String?               @db.VarChar(32)
+  schemaVersion                  String?               @map("schema_version") @db.VarChar(100)
+  quotaVersion                   Int                   @default(0) @map("quota_version")
+  onboardingStep                 String                @default("company_profile") @map("onboarding_step") @db.VarChar(80)
+  onboardingCompletedAt          DateTime?             @map("onboarding_completed_at") @db.DateTime(3)
+  internal                       Boolean               @default(false)
+  suspendedAt                    DateTime?             @map("suspended_at") @db.DateTime(3)
+  retentionEndsAt                DateTime?             @map("retention_ends_at") @db.DateTime(3)
+  administrativelySuspendedAt    DateTime?             @map("administratively_suspended_at") @db.DateTime(3)
+  administrativeSuspensionReason String?               @map("administrative_suspension_reason") @db.VarChar(500)
+  administrativelySuspendedById  String?               @map("administratively_suspended_by_id") @db.Char(36)
+  createdAt                      DateTime              @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                      DateTime              @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  memberships                    Membership[]
+  domains                        Domain[]
+  subscriptions                  Subscription[]
+  trial                          Trial?
+  prices                         TenantPrice[]
+  paymentEvents                  PaymentEvent[]
+  usageCounters                  UsageCounter[]
+  provisioningJobs               ProvisioningJob[]
+  auditEvents                    PlatformAuditEvent[]
+  invitations                    Invitation[]
+  deletionRequests               DeletionRequest[]
+  ssoConfig                      EnterpriseSsoConfig?
+  providerCredentials            ProviderCredential[]
+  billingInvoices                BillingInvoice[]
+  accountExports                 AccountExport[]
+  migrationTargets               MigrationTarget[]
+  backupArtifacts                BackupArtifact[]
+  operatorAccessGrants           OperatorAccessGrant[]
+  securityEvents                 SecurityEvent[]
+  uploadObjects                  UploadObject[]
+  consents                       ConsentRecord[]
+  dataSubjectRequests            DataSubjectRequest[]
+  ssoLoginStates                 SsoLoginState[]
+  trialClaims                    TrialClaim[]
+  subscriptionChanges           SubscriptionChange[]
+  administrativelySuspendedBy    PlatformOperator?     @relation("AdministrativeSuspensions", fields: [administrativelySuspendedById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@map("tenants")
+}
+
+model Membership {
+  id            String                 @id @default(uuid()) @db.Char(36)
+  tenantId      String                 @map("tenant_id") @db.Char(36)
+  userId        String                 @map("user_id") @db.Char(36)
+  tenantUserId  Int?                   @map("tenant_user_id")
+  role          MembershipRole
+  status        MembershipStatus       @default(active)
+  createdAt     DateTime               @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt     DateTime               @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user          PlatformUser           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokens PlatformRefreshToken[]
+
+  @@unique([tenantId, userId])
+  @@index([userId, status])
+  @@map("memberships")
+}
+
+model PlatformRefreshToken {
+  id            String       @id @db.Char(36)
+  userId        String       @map("user_id") @db.Char(36)
+  membershipId  String       @map("membership_id") @db.Char(36)
+  familyId      String       @map("family_id") @db.Char(36)
+  tokenHash     String       @unique @map("token_hash") @db.Char(64)
+  jwtId         String       @map("jwt_id") @db.Char(36)
+  expiresAt     DateTime     @map("expires_at") @db.DateTime(3)
+  revokedAt     DateTime?    @map("revoked_at") @db.DateTime(3)
+  replacedById  String?      @map("replaced_by_id") @db.Char(36)
+  ipAddress     String?      @map("ip_address") @db.VarChar(64)
+  userAgent     String?      @map("user_agent") @db.VarChar(512)
+  authMethod    String       @default("password") @map("auth_method") @db.VarChar(40)
+  mfaVerifiedAt DateTime?    @map("mfa_verified_at") @db.DateTime(3)
+  createdAt     DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+  user          PlatformUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  membership    Membership   @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("platform_refresh_tokens")
+}
+
+model EmailVerification {
+  id        String       @id @default(uuid()) @db.Char(36)
+  userId    String       @map("user_id") @db.Char(36)
+  tokenHash String       @unique @map("token_hash") @db.Char(64)
+  expiresAt DateTime     @map("expires_at") @db.DateTime(3)
+  usedAt    DateTime?    @map("used_at") @db.DateTime(3)
+  createdAt DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+  user      PlatformUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("email_verifications")
+}
+
+model Domain {
+  id               String       @id @default(uuid()) @db.Char(36)
+  tenantId         String       @map("tenant_id") @db.Char(36)
+  hostname         String       @unique @db.VarChar(255)
+  kind             DomainKind
+  status           DomainStatus @default(pending)
+  verificationHash String?      @map("verification_hash") @db.Char(64)
+  dnsRecordName    String?      @map("dns_record_name") @db.VarChar(255)
+  dnsRecordValue   String?      @map("dns_record_value") @db.VarChar(512)
+  providerTenantId String?      @unique @map("provider_tenant_id") @db.VarChar(160)
+  certificateArn   String?      @map("certificate_arn") @db.VarChar(512)
+  failureReason    String?      @map("failure_reason") @db.Text
+  verifiedAt       DateTime?    @map("verified_at") @db.DateTime(3)
+  activatedAt      DateTime?    @map("activated_at") @db.DateTime(3)
+  updatedAt        DateTime     @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  createdAt        DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+  tenant           Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@map("domains")
+}
+
+model Plan {
+  code                PlanCode       @id
+  name                String         @db.VarChar(80)
+  includedSeats       Int            @map("included_seats")
+  maxSeats            Int?           @map("max_seats")
+  storageBytes        BigInt         @map("storage_bytes")
+  monthlyPricePaise   Int?           @map("monthly_price_paise")
+  annualPricePaise    Int?           @map("annual_price_paise")
+  extraSeatPricePaise Int?           @map("extra_seat_price_paise")
+  active              Boolean        @default(true)
+  features            Entitlement[]
+  prices              TenantPrice[]
+  subscriptions       Subscription[]
+
+  @@map("plans")
+}
+
+model Entitlement {
+  id         String   @id @default(uuid()) @db.Char(36)
+  planCode   PlanCode @map("plan_code")
+  featureKey String   @map("feature_key") @db.VarChar(100)
+  enabled    Boolean  @default(true)
+  limitValue BigInt?  @map("limit_value")
+  plan       Plan     @relation(fields: [planCode], references: [code], onDelete: Cascade)
+
+  @@unique([planCode, featureKey])
+  @@map("entitlements")
+}
+
+model PlanCatalogVersion {
+  id            String        @id @default(uuid()) @db.Char(36)
+  version       Int           @unique
+  status        CatalogStatus @default(draft)
+  notes         String?       @db.Text
+  publishedAt   DateTime?     @map("published_at") @db.DateTime(3)
+  publishedById String?       @map("published_by_id") @db.Char(36)
+  createdById   String        @map("created_by_id") @db.Char(36)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt     DateTime      @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  plans         PlanVersion[]
+  createdBy     PlatformOperator @relation("CatalogCreatedBy", fields: [createdById], references: [id])
+  publishedBy   PlatformOperator? @relation("CatalogPublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+
+  @@index([status, version])
+  @@map("plan_catalog_versions")
+}
+
+model PlanVersion {
+  id                    String             @id @default(uuid()) @db.Char(36)
+  catalogVersionId      String             @map("catalog_version_id") @db.Char(36)
+  code                  PlanCode
+  name                  String             @db.VarChar(80)
+  description           String             @db.VarChar(500)
+  includedSeats         Int                @map("included_seats")
+  maxSeats              Int?               @map("max_seats")
+  storageBytes          BigInt             @map("storage_bytes")
+  monthlyPricePaise     Int?               @map("monthly_price_paise")
+  annualPricePaise      Int?               @map("annual_price_paise")
+  extraSeatPricePaise   Int?               @map("extra_seat_price_paise")
+  createdAt             DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  catalog               PlanCatalogVersion @relation(fields: [catalogVersionId], references: [id], onDelete: Cascade)
+  entitlements          PlanVersionEntitlement[]
+  subscriptions         Subscription[]
+  trials                Trial[]
+  prices                TenantPrice[]
+
+  @@unique([catalogVersionId, code])
+  @@map("plan_versions")
+}
+
+model PlanVersionEntitlement {
+  id            String      @id @default(uuid()) @db.Char(36)
+  planVersionId String      @map("plan_version_id") @db.Char(36)
+  featureKey    String      @map("feature_key") @db.VarChar(100)
+  enabled       Boolean     @default(true)
+  limitValue    BigInt?     @map("limit_value")
+  planVersion   PlanVersion @relation(fields: [planVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([planVersionId, featureKey])
+  @@map("plan_version_entitlements")
+}
+
+model TenantPrice {
+  id             String          @id @default(uuid()) @db.Char(36)
+  tenantId       String          @map("tenant_id") @db.Char(36)
+  planCode       PlanCode        @map("plan_code")
+  interval       BillingInterval
+  seats          Int
+  amountPaise    Int             @map("amount_paise")
+  providerPlanId String?         @unique @map("provider_plan_id") @db.VarChar(100)
+  planVersionId  String?         @map("plan_version_id") @db.Char(36)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan           Plan            @relation(fields: [planCode], references: [code])
+  planVersion    PlanVersion?     @relation(fields: [planVersionId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, planCode, interval, seats])
+  @@map("tenant_prices")
+}
+
+model Subscription {
+  id                     String             @id @default(uuid()) @db.Char(36)
+  tenantId               String             @map("tenant_id") @db.Char(36)
+  planCode               PlanCode           @map("plan_code")
+  status                 SubscriptionStatus
+  interval               BillingInterval?
+  seats                  Int
+  provider               String?            @db.VarChar(40)
+  providerCustomerId     String?            @map("provider_customer_id") @db.VarChar(100)
+  providerSubscriptionId String?            @unique @map("provider_subscription_id") @db.VarChar(100)
+  currentPeriodStart     DateTime?          @map("current_period_start") @db.DateTime(3)
+  currentPeriodEnd       DateTime?          @map("current_period_end") @db.DateTime(3)
+  cancelAtPeriodEnd      Boolean            @default(false) @map("cancel_at_period_end")
+  lastProviderEventAt    DateTime?          @map("last_provider_event_at") @db.DateTime(3)
+  amountPaise            Int?               @map("amount_paise")
+  outstandingPaise       Int?               @map("outstanding_paise")
+  nextChargeAt           DateTime?          @map("next_charge_at") @db.DateTime(3)
+  pastDueSince           DateTime?          @map("past_due_since") @db.DateTime(3)
+  contractReference      String?            @map("contract_reference") @db.VarChar(160)
+  source                 SubscriptionSource @default(razorpay)
+  planVersionId          String?            @map("plan_version_id") @db.Char(36)
+  entitlementSnapshot    Json?              @map("entitlement_snapshot")
+  pricingSnapshot        Json?              @map("pricing_snapshot")
+  createdAt              DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt              DateTime           @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  tenant                 Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan                   Plan               @relation(fields: [planCode], references: [code])
+  planVersion            PlanVersion?       @relation(fields: [planVersionId], references: [id], onDelete: SetNull)
+  changes                SubscriptionChange[]
+
+  @@index([tenantId, status])
+  @@map("subscriptions")
+}
+
+model SubscriptionChange {
+  id              String       @id @default(uuid()) @db.Char(36)
+  tenantId        String       @map("tenant_id") @db.Char(36)
+  subscriptionId  String       @map("subscription_id") @db.Char(36)
+  operatorId      String?      @map("operator_id") @db.Char(36)
+  changeType      String       @map("change_type") @db.VarChar(80)
+  previousState   Json?        @map("previous_state")
+  resultingState  Json?        @map("resulting_state")
+  reason          String       @db.VarChar(500)
+  ticket          String?      @db.VarChar(160)
+  idempotencyKey  String       @unique @map("idempotency_key") @db.VarChar(160)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  operator        PlatformOperator? @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+
+  @@index([subscriptionId, createdAt])
+  @@map("subscription_changes")
+}
+
+model Trial {
+  id        String    @id @default(uuid()) @db.Char(36)
+  tenantId  String    @unique @map("tenant_id") @db.Char(36)
+  startedAt DateTime  @map("started_at") @db.DateTime(3)
+  endsAt    DateTime  @map("ends_at") @db.DateTime(3)
+  endedAt   DateTime? @map("ended_at") @db.DateTime(3)
+  planVersionId       String? @map("plan_version_id") @db.Char(36)
+  entitlementSnapshot Json?   @map("entitlement_snapshot")
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planVersion PlanVersion? @relation(fields: [planVersionId], references: [id], onDelete: SetNull)
+
+  @@index([endsAt])
+  @@map("trials")
+}
+
+model TrialClaim {
+  id             String   @id @default(uuid()) @db.Char(36)
+  tenantId       String   @map("tenant_id") @db.Char(36)
+  identifierType String   @map("identifier_type") @db.VarChar(40)
+  identifierHash String   @unique @map("identifier_hash") @db.Char(64)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("trial_claims")
+}
+
+model PaymentEvent {
+  id                String    @id @default(uuid()) @db.Char(36)
+  tenantId          String?   @map("tenant_id") @db.Char(36)
+  provider          String    @db.VarChar(40)
+  providerEventId   String    @unique @map("provider_event_id") @db.VarChar(160)
+  eventType         String    @map("event_type") @db.VarChar(100)
+  payloadHash       String    @map("payload_hash") @db.Char(64)
+  payload           Json
+  providerCreatedAt DateTime? @map("provider_created_at") @db.DateTime(3)
+  processedAt       DateTime? @map("processed_at") @db.DateTime(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  tenant            Tenant?   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@map("payment_events")
+}
+
+model UsageCounter {
+  id          String   @id @default(uuid()) @db.Char(36)
+  tenantId    String   @map("tenant_id") @db.Char(36)
+  quotaKey    String   @map("quota_key") @db.VarChar(100)
+  periodStart DateTime @map("period_start") @db.DateTime(3)
+  periodEnd   DateTime @map("period_end") @db.DateTime(3)
+  value       BigInt   @default(0)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, quotaKey, periodStart])
+  @@map("usage_counters")
+}
+
+model ProvisioningJob {
+  id           String             @id @default(uuid()) @db.Char(36)
+  tenantId     String             @map("tenant_id") @db.Char(36)
+  status       ProvisioningStatus @default(pending)
+  attemptCount Int                @default(0) @map("attempt_count")
+  lastError    String?            @map("last_error") @db.Text
+  startedAt    DateTime?          @map("started_at") @db.DateTime(3)
+  completedAt  DateTime?          @map("completed_at") @db.DateTime(3)
+  createdAt    DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime           @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@map("provisioning_jobs")
+}
+
+model Invitation {
+  id          String           @id @default(uuid()) @db.Char(36)
+  tenantId    String           @map("tenant_id") @db.Char(36)
+  email       String           @db.VarChar(255)
+  role        MembershipRole
+  tokenHash   String           @unique @map("token_hash") @db.Char(64)
+  status      MembershipStatus @default(invited)
+  invitedById String           @map("invited_by_id") @db.Char(36)
+  expiresAt   DateTime         @map("expires_at") @db.DateTime(3)
+  acceptedAt  DateTime?        @map("accepted_at") @db.DateTime(3)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invitedBy   PlatformUser     @relation("InvitationSender", fields: [invitedById], references: [id])
+
+  @@index([tenantId, email])
+  @@map("invitations")
+}
+
+model PlatformAuditEvent {
+  id           String            @id @default(uuid()) @db.Char(36)
+  tenantId     String?           @map("tenant_id") @db.Char(36)
+  actorId      String?           @map("actor_id") @db.Char(36)
+  operatorId   String?           @map("operator_id") @db.Char(36)
+  action       String            @db.VarChar(120)
+  target       String?           @db.VarChar(255)
+  metadata     Json?
+  ipAddress    String?           @map("ip_address") @db.VarChar(64)
+  previousHash String?           @map("previous_hash") @db.Char(64)
+  eventHash    String?           @unique @map("event_hash") @db.Char(64)
+  createdAt    DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  tenant       Tenant?           @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  actor        PlatformUser?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  operator     PlatformOperator? @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([operatorId, createdAt])
+  @@map("platform_audit_events")
+}
+
+model DeletionRequest {
+  id           String         @id @default(uuid()) @db.Char(36)
+  tenantId     String         @map("tenant_id") @db.Char(36)
+  requestedBy  String         @map("requested_by") @db.Char(36)
+  executeAt    DateTime       @map("execute_at") @db.DateTime(3)
+  status       DeletionStatus @default(requested)
+  reason       String?        @db.VarChar(500)
+  lastError    String?        @map("last_error") @db.Text
+  attemptCount Int            @default(0) @map("attempt_count")
+  completedAt  DateTime?      @map("completed_at") @db.DateTime(3)
+  cancelledAt  DateTime?      @map("cancelled_at") @db.DateTime(3)
+  createdAt    DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([executeAt, completedAt])
+  @@map("deletion_requests")
+}
+
+model MfaMethod {
+  id              String        @id @default(uuid()) @db.Char(36)
+  userId          String        @map("user_id") @db.Char(36)
+  kind            MfaMethodKind @default(totp)
+  encryptedSecret String        @map("encrypted_secret") @db.Text
+  verifiedAt      DateTime?     @map("verified_at") @db.DateTime(3)
+  disabledAt      DateTime?     @map("disabled_at") @db.DateTime(3)
+  lastUsedStep    BigInt?       @map("last_used_step")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime      @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  user            PlatformUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind])
+  @@map("mfa_methods")
+}
+
+model MfaChallenge {
+  id           String              @id @default(uuid()) @db.Char(36)
+  userId       String              @map("user_id") @db.Char(36)
+  membershipId String?             @map("membership_id") @db.Char(36)
+  purpose      MfaChallengePurpose
+  tokenHash    String              @unique @map("token_hash") @db.Char(64)
+  attempts     Int                 @default(0)
+  expiresAt    DateTime            @map("expires_at") @db.DateTime(3)
+  completedAt  DateTime?           @map("completed_at") @db.DateTime(3)
+  createdAt    DateTime            @default(now()) @map("created_at") @db.DateTime(3)
+  user         PlatformUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose, expiresAt])
+  @@map("mfa_challenges")
+}
+
+model RecoveryCode {
+  id        String       @id @default(uuid()) @db.Char(36)
+  userId    String       @map("user_id") @db.Char(36)
+  codeHash  String       @unique @map("code_hash") @db.Char(64)
+  usedAt    DateTime?    @map("used_at") @db.DateTime(3)
+  createdAt DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+  user      PlatformUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, usedAt])
+  @@map("recovery_codes")
+}
+
+model EnterpriseSsoConfig {
+  id                   String    @id @default(uuid()) @db.Char(36)
+  tenantId             String    @unique @map("tenant_id") @db.Char(36)
+  policy               SsoPolicy @default(disabled)
+  workosOrganizationId String?   @unique @map("workos_organization_id") @db.VarChar(160)
+  workosConnectionId   String?   @unique @map("workos_connection_id") @db.VarChar(160)
+  verifiedDomains      Json?     @map("verified_domains")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  tenant               Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("enterprise_sso_configs")
+}
+
+model SsoLoginState {
+  id                    String    @id @default(uuid()) @db.Char(36)
+  tenantId              String    @map("tenant_id") @db.Char(36)
+  stateHash             String    @unique @map("state_hash") @db.Char(64)
+  encryptedCodeVerifier String    @map("encrypted_code_verifier") @db.Text
+  nonce                 String    @db.VarChar(160)
+  expiresAt             DateTime  @map("expires_at") @db.DateTime(3)
+  usedAt                DateTime? @map("used_at") @db.DateTime(3)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  tenant                Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, expiresAt])
+  @@map("sso_login_states")
+}
+
+model ProviderCredential {
+  id             String         @id @default(uuid()) @db.Char(36)
+  tenantId       String         @map("tenant_id") @db.Char(36)
+  provider       String         @db.VarChar(80)
+  secretArn      String         @map("secret_arn") @db.VarChar(512)
+  status         ResourceStatus @default(pending)
+  metadata       Json?
+  lastVerifiedAt DateTime?      @map("last_verified_at") @db.DateTime(3)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime       @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider])
+  @@map("provider_credentials")
+}
+
+model BillingInvoice {
+  id                String               @id @default(uuid()) @db.Char(36)
+  tenantId          String               @map("tenant_id") @db.Char(36)
+  subscriptionId    String?              @map("subscription_id") @db.Char(36)
+  invoiceNumber     String               @unique @map("invoice_number") @db.VarChar(80)
+  status            InvoiceStatus        @default(draft)
+  currency          String               @default("INR") @db.Char(3)
+  legalName         String               @map("legal_name") @db.VarChar(255)
+  gstin             String?              @db.VarChar(32)
+  billingAddress    String               @map("billing_address") @db.Text
+  placeOfSupply     String?              @map("place_of_supply") @db.VarChar(80)
+  subtotalPaise     Int                  @map("subtotal_paise")
+  taxPaise          Int                  @default(0) @map("tax_paise")
+  totalPaise        Int                  @map("total_paise")
+  provider          String?              @db.VarChar(40)
+  providerInvoiceId String?              @unique @map("provider_invoice_id") @db.VarChar(160)
+  providerStatus    String?              @map("provider_status") @db.VarChar(80)
+  pdfStorageKey     String?              @map("pdf_storage_key") @db.VarChar(512)
+  idempotencyKey    String               @unique @map("idempotency_key") @db.VarChar(160)
+  issuedAt          DateTime?            @map("issued_at") @db.DateTime(3)
+  paidAt            DateTime?            @map("paid_at") @db.DateTime(3)
+  dueAt             DateTime?            @map("due_at") @db.DateTime(3)
+  amountPaidPaise   Int?                 @map("amount_paid_paise")
+  balancePaise      Int?                 @map("balance_paise")
+  createdAt         DateTime             @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt         DateTime             @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  tenant            Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lines             BillingInvoiceLine[]
+
+  @@index([tenantId, createdAt])
+  @@map("billing_invoices")
+}
+
+model BillingInvoiceLine {
+  id              String         @id @default(uuid()) @db.Char(36)
+  invoiceId       String         @map("invoice_id") @db.Char(36)
+  description     String         @db.VarChar(500)
+  quantity        Int            @default(1)
+  unitAmountPaise Int            @map("unit_amount_paise")
+  taxPaise        Int            @default(0) @map("tax_paise")
+  hsnSac          String?        @map("hsn_sac") @db.VarChar(32)
+  providerTaxId   String?        @map("provider_tax_id") @db.VarChar(160)
+  invoice         BillingInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("billing_invoice_lines")
+}
+
+model AccountExport {
+  id            String       @id @default(uuid()) @db.Char(36)
+  tenantId      String       @map("tenant_id") @db.Char(36)
+  requestedById String?      @map("requested_by_id") @db.Char(36)
+  requestedByOperatorId String? @map("requested_by_operator_id") @db.Char(36)
+  status        ExportStatus @default(pending)
+  storageKey    String?      @map("storage_key") @db.VarChar(512)
+  sha256        String?      @db.Char(64)
+  sizeBytes     BigInt?      @map("size_bytes")
+  expiresAt     DateTime?    @map("expires_at") @db.DateTime(3)
+  lastError     String?      @map("last_error") @db.Text
+  createdAt     DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+  completedAt   DateTime?    @map("completed_at") @db.DateTime(3)
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requestedBy   PlatformUser? @relation("ExportRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  requestedByOperator PlatformOperator? @relation(fields: [requestedByOperatorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@map("account_exports")
+}
+
+model ConsentRecord {
+  id              String       @id @default(uuid()) @db.Char(36)
+  tenantId        String?      @map("tenant_id") @db.Char(36)
+  userId          String       @map("user_id") @db.Char(36)
+  documentType    String       @map("document_type") @db.VarChar(80)
+  documentVersion String       @map("document_version") @db.VarChar(80)
+  documentHash    String       @map("document_hash") @db.Char(64)
+  purpose         String       @db.VarChar(255)
+  ipAddress       String?      @map("ip_address") @db.VarChar(64)
+  userAgent       String?      @map("user_agent") @db.VarChar(512)
+  acceptedAt      DateTime     @default(now()) @map("accepted_at") @db.DateTime(3)
+  withdrawnAt     DateTime?    @map("withdrawn_at") @db.DateTime(3)
+  tenant          Tenant?      @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  user            PlatformUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, documentType, acceptedAt])
+  @@map("consent_records")
+}
+
+model DataSubjectRequest {
+  id          String         @id @default(uuid()) @db.Char(36)
+  tenantId    String?        @map("tenant_id") @db.Char(36)
+  userId      String         @map("user_id") @db.Char(36)
+  requestType String         @map("request_type") @db.VarChar(40)
+  status      ResourceStatus @default(pending)
+  dueAt       DateTime       @map("due_at") @db.DateTime(3)
+  completedAt DateTime?      @map("completed_at") @db.DateTime(3)
+  notes       String?        @db.Text
+  createdAt   DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  tenant      Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  user        PlatformUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, dueAt])
+  @@map("data_subject_requests")
+}
+
+model MigrationRollout {
+  id            String                 @id @default(uuid()) @db.Char(36)
+  migrationName String                 @unique @map("migration_name") @db.VarChar(160)
+  targetVersion String                 @map("target_version") @db.VarChar(100)
+  status        MigrationRolloutStatus @default(draft)
+  currentStage  Int                    @default(0) @map("current_stage")
+  startedAt     DateTime?              @map("started_at") @db.DateTime(3)
+  completedAt   DateTime?              @map("completed_at") @db.DateTime(3)
+  pausedReason  String?                @map("paused_reason") @db.Text
+  createdAt     DateTime               @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt     DateTime               @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  targets       MigrationTarget[]
+
+  @@map("migration_rollouts")
+}
+
+model MigrationTarget {
+  id             String                @id @default(uuid()) @db.Char(36)
+  rolloutId      String                @map("rollout_id") @db.Char(36)
+  tenantId       String                @map("tenant_id") @db.Char(36)
+  stage          Int
+  status         MigrationTargetStatus @default(pending)
+  leaseOwner     String?               @map("lease_owner") @db.VarChar(160)
+  leaseExpiresAt DateTime?             @map("lease_expires_at") @db.DateTime(3)
+  attemptCount   Int                   @default(0) @map("attempt_count")
+  lastError      String?               @map("last_error") @db.Text
+  startedAt      DateTime?             @map("started_at") @db.DateTime(3)
+  completedAt    DateTime?             @map("completed_at") @db.DateTime(3)
+  rollout        MigrationRollout      @relation(fields: [rolloutId], references: [id], onDelete: Cascade)
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([rolloutId, tenantId])
+  @@index([rolloutId, stage, status])
+  @@map("migration_targets")
+}
+
+model BackupArtifact {
+  id            String         @id @default(uuid()) @db.Char(36)
+  tenantId      String?        @map("tenant_id") @db.Char(36)
+  kind          String         @db.VarChar(40)
+  status        ResourceStatus @default(pending)
+  storageKey    String?        @map("storage_key") @db.VarChar(512)
+  checksum      String?        @db.Char(64)
+  schemaVersion String?        @map("schema_version") @db.VarChar(100)
+  sizeBytes     BigInt?        @map("size_bytes")
+  capturedAt    DateTime?      @map("captured_at") @db.DateTime(3)
+  expiresAt     DateTime?      @map("expires_at") @db.DateTime(3)
+  restoredAt    DateTime?      @map("restored_at") @db.DateTime(3)
+  lastError     String?        @map("last_error") @db.Text
+  createdAt     DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, capturedAt])
+  @@map("backup_artifacts")
+}
+
+model PlatformOperator {
+  id                        String                    @id @default(uuid()) @db.Char(36)
+  email                     String                    @unique @db.VarChar(255)
+  name                      String                    @db.VarChar(255)
+  passwordHash              String                    @map("password_hash") @db.VarChar(255)
+  role                      OperatorRole
+  status                    OperatorStatus            @default(active)
+  mfaSecret                 String?                   @map("mfa_secret") @db.Text
+  mfaVerifiedAt             DateTime?                 @map("mfa_verified_at") @db.DateTime(3)
+  lastUsedStep              BigInt?                   @map("last_used_step")
+  createdAt                 DateTime                  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                 DateTime                  @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  accessGrants              OperatorAccessGrant[]
+  sessions                  PlatformOperatorSession[]
+  auditEvents               PlatformAuditEvent[]
+  administrativeSuspensions Tenant[]                  @relation("AdministrativeSuspensions")
+  catalogVersionsCreated    PlanCatalogVersion[]      @relation("CatalogCreatedBy")
+  catalogVersionsPublished  PlanCatalogVersion[]      @relation("CatalogPublishedBy")
+  subscriptionChanges       SubscriptionChange[]
+  invitationsSent           PlatformOperatorInvitation[] @relation("OperatorInvitationSender")
+  governedOperations        GovernedOperation[]
+  exportsRequested          AccountExport[]
+
+  @@map("platform_operators")
+}
+
+model GovernedOperation {
+  id             String           @id @default(uuid()) @db.Char(36)
+  idempotencyKey String           @unique @map("idempotency_key") @db.VarChar(160)
+  operatorId     String           @map("operator_id") @db.Char(36)
+  action         String           @db.VarChar(120)
+  target         String?          @db.VarChar(255)
+  result         Json?
+  createdAt      DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  operator       PlatformOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+
+  @@index([operatorId, createdAt])
+  @@map("governed_operations")
+}
+
+model PlatformOperatorInvitation {
+  id           String                   @id @default(uuid()) @db.Char(36)
+  email        String                   @db.VarChar(255)
+  name         String                   @db.VarChar(255)
+  role         OperatorRole
+  tokenHash    String                   @unique @map("token_hash") @db.Char(64)
+  status       OperatorInvitationStatus @default(pending)
+  invitedById  String                   @map("invited_by_id") @db.Char(36)
+  expiresAt    DateTime                 @map("expires_at") @db.DateTime(3)
+  acceptedAt   DateTime?                @map("accepted_at") @db.DateTime(3)
+  createdAt    DateTime                 @default(now()) @map("created_at") @db.DateTime(3)
+  invitedBy    PlatformOperator         @relation("OperatorInvitationSender", fields: [invitedById], references: [id])
+
+  @@index([email, status])
+  @@map("platform_operator_invitations")
+}
+
+model PlatformOperatorSession {
+  id                String           @id @db.Char(36)
+  operatorId        String           @map("operator_id") @db.Char(36)
+  mfaVerifiedAt     DateTime         @map("mfa_verified_at") @db.DateTime(3)
+  lastSeenAt        DateTime         @map("last_seen_at") @db.DateTime(3)
+  absoluteExpiresAt DateTime         @map("absolute_expires_at") @db.DateTime(3)
+  revokedAt         DateTime?        @map("revoked_at") @db.DateTime(3)
+  ipAddress         String?          @map("ip_address") @db.VarChar(64)
+  userAgent         String?          @map("user_agent") @db.VarChar(512)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  operator          PlatformOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+
+  @@index([operatorId, revokedAt])
+  @@index([lastSeenAt, absoluteExpiresAt])
+  @@map("platform_operator_sessions")
+}
+
+model OperatorAccessGrant {
+  id           String           @id @default(uuid()) @db.Char(36)
+  operatorId   String           @map("operator_id") @db.Char(36)
+  tenantId     String           @map("tenant_id") @db.Char(36)
+  approvedById String?          @map("approved_by_id") @db.Char(36)
+  approvedAt   DateTime?        @map("approved_at") @db.DateTime(3)
+  reason       String           @db.VarChar(500)
+  ticket       String           @db.VarChar(160)
+  readOnly     Boolean          @default(true) @map("read_only")
+  startsAt     DateTime         @map("starts_at") @db.DateTime(3)
+  expiresAt    DateTime         @map("expires_at") @db.DateTime(3)
+  revokedAt    DateTime?        @map("revoked_at") @db.DateTime(3)
+  createdAt    DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  operator     PlatformOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  approvedBy   PlatformUser?    @relation("OperatorGrantApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, expiresAt])
+  @@map("operator_access_grants")
+}
+
+model SecurityEvent {
+  id         String           @id @default(uuid()) @db.Char(36)
+  tenantId   String?          @map("tenant_id") @db.Char(36)
+  actorId    String?          @map("actor_id") @db.Char(36)
+  eventType  String           @map("event_type") @db.VarChar(120)
+  severity   SecuritySeverity @default(info)
+  source     String           @db.VarChar(80)
+  ipAddress  String?          @map("ip_address") @db.VarChar(64)
+  metadata   Json?
+  resolvedAt DateTime?        @map("resolved_at") @db.DateTime(3)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  tenant     Tenant?          @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  actor      PlatformUser?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, severity, createdAt])
+  @@map("security_events")
+}
+
+model UploadObject {
+  id             String         @id @default(uuid()) @db.Char(36)
+  tenantId       String         @map("tenant_id") @db.Char(36)
+  objectKey      String         @unique @map("object_key") @db.VarChar(700)
+  originalName   String         @map("original_name") @db.VarChar(255)
+  mimeType       String         @map("mime_type") @db.VarChar(160)
+  sizeBytes      BigInt         @map("size_bytes")
+  checksum       String?        @db.VarChar(128)
+  status         ResourceStatus @default(pending)
+  malwareStatus  String?        @map("malware_status") @db.VarChar(80)
+  cleanObjectKey String?        @map("clean_object_key") @db.VarChar(700)
+  uploadedById   String         @map("uploaded_by_id") @db.Char(36)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime       @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@map("upload_objects")
+}

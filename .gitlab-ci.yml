@@ -1,0 +1,91 @@
+stages: [validate, test, build, publish, deploy]
+
+default:
+  image: node:24-alpine
+  cache:
+    key:
+      files: [package-lock.json]
+    paths: [.npm/]
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+
+variables:
+  DATABASE_URL: mysql://moon_user:test-password@mysql:3306/moonsconfig_test
+  REDIS_URL: redis://redis:6379
+  JWT_ACCESS_SECRET: ci-only-secret-value-with-at-least-thirty-two-characters
+  NODE_ENV: test
+
+validate:
+  stage: validate
+  script:
+    - npm run format:check
+    - npm run lint
+    - npm run typecheck
+    - npm run prisma:validate --workspace @moonsconfig/server
+    - npm run check:runtime-sql --workspace @moonsconfig/server
+    - npm run check:route-security --workspace @moonsconfig/server
+    - npm audit --omit=dev --audit-level=high
+
+validate-infrastructure:
+  stage: validate
+  image:
+    name: hashicorp/terraform:1.12.2
+    entrypoint: ['']
+  before_script: []
+  script:
+    - terraform -chdir=infra/terraform fmt -check
+    - terraform -chdir=infra/terraform init -backend=false -input=false
+    - terraform -chdir=infra/terraform validate
+
+test:
+  stage: test
+  services:
+    - name: mysql:8.4
+      alias: mysql
+      variables:
+        MYSQL_DATABASE: moonsconfig_test
+        MYSQL_USER: moon_user
+        MYSQL_PASSWORD: test-password
+        MYSQL_ROOT_PASSWORD: test-root-password
+    - name: redis:7.4-alpine
+      alias: redis
+  script:
+    - npm run prisma:deploy --workspace @moonsconfig/server
+    - npm test
+
+build:
+  stage: build
+  script: ['npm run build']
+  artifacts:
+    paths: [client/dist/, server/dist/]
+    expire_in: 7 days
+
+publish-images:
+  stage: publish
+  image: docker:27
+  services: [docker:27-dind]
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - docker build -f client/Dockerfile -t "$CI_REGISTRY_IMAGE/client:$CI_COMMIT_SHA" .
+    - docker build -f server/Dockerfile -t "$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHA" .
+    - docker push "$CI_REGISTRY_IMAGE/client:$CI_COMMIT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHA"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+deploy-production:
+  stage: deploy
+  image: alpine:3.22
+  before_script:
+    - apk add --no-cache openssh-client
+    - install -m 700 -d ~/.ssh
+    - printf '%s' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+    - chmod 600 ~/.ssh/id_ed25519
+    - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+  script:
+    - ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd '$DEPLOY_PATH' && export RELEASE_SHA='$CI_COMMIT_SHA' && docker compose pull && docker compose up -d --remove-orphans"
+  environment: { name: production }
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DEPLOY_HOST

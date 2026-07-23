@@ -1,0 +1,535 @@
+import { Router } from 'express';
+import { platformOpsController } from '../controllers/platformOpsController.js';
+import {
+  authenticateOperator,
+  authorizeOperator,
+  requireFreshOperatorMfa,
+} from '../middlewares/operatorAuth.js';
+import { authRateLimit } from '../middlewares/rateLimit.js';
+import { validate } from '../middlewares/validate.js';
+import {
+  accessRequestSchema,
+  migrationCreateSchema,
+  operatorLoginSchema,
+  operatorMfaSchema,
+  restoreDrillSchema,
+  rolloutIdSchema,
+  tenantOpsIdSchema,
+  governedAccessGrantSchema,
+  governedAccessRequestSchema,
+  governedBillingSchema,
+  governedInvitationSchema,
+  governedInvoiceSchema,
+  governedMemberCommandSchema,
+  governedMembershipActionSchema,
+  governedOwnershipSchema,
+  governedWorkspaceActionSchema,
+  invoiceDownloadSchema,
+  platformListSchema,
+  platformWorkspaceSchema,
+  operatorActivationSchema,
+  operatorActivationVerifySchema,
+  createWorkspaceSchema,
+  updateWorkspaceSchema,
+  governedTenantSchema,
+  inviteMemberSchema,
+  governedMembershipDeleteSchema,
+  trialAdminSchema,
+  manualSubscriptionSchema,
+  subscriptionActionSchema,
+  providerCheckoutSchema,
+  createInvoiceSchema,
+  invoiceActionSchema,
+  updateInvoiceSchema,
+  operatorInviteSchema,
+  operatorUpdateSchema,
+  catalogCreateSchema,
+  catalogPublishSchema,
+  governedExportSchema,
+  adminDomainCreateSchema,
+  adminDomainActionSchema,
+  adminSsoSchema,
+  adminProviderSchema,
+  adminProviderDeleteSchema,
+  adminExportCreateSchema,
+  adminDeletionRetrySchema,
+  adminMigrationCreateSchema,
+  adminMigrationActionSchema,
+  adminProvisioningActionSchema,
+} from '../validators/platformOpsValidator.js';
+
+export const platformOpsRoutes = Router();
+platformOpsRoutes.post(
+  '/auth/login',
+  authRateLimit,
+  validate(operatorLoginSchema),
+  platformOpsController.login,
+);
+platformOpsRoutes.post(
+  '/auth/activate',
+  authRateLimit,
+  validate(operatorActivationSchema),
+  platformOpsController.activateOperator,
+);
+platformOpsRoutes.post(
+  '/auth/activate/verify',
+  authRateLimit,
+  validate(operatorActivationVerifySchema),
+  platformOpsController.verifyOperatorActivation,
+);
+platformOpsRoutes.use(authenticateOperator);
+platformOpsRoutes.post(
+  '/auth/step-up',
+  authRateLimit,
+  validate(operatorMfaSchema),
+  platformOpsController.stepUp,
+);
+platformOpsRoutes.post('/auth/logout', platformOpsController.logout);
+platformOpsRoutes.get('/overview', platformOpsController.overview);
+platformOpsRoutes.post(
+  '/workspaces',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(createWorkspaceSchema),
+  platformOpsController.createWorkspace,
+);
+platformOpsRoutes.patch(
+  '/workspaces/:tenantId',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(updateWorkspaceSchema),
+  platformOpsController.updateWorkspace,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/reset-onboarding',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(governedTenantSchema),
+  platformOpsController.resetOnboarding,
+);
+platformOpsRoutes.get(
+  '/workspaces',
+  authorizeOperator('support', 'billing', 'security'),
+  validate(platformListSchema),
+  platformOpsController.workspaces,
+);
+platformOpsRoutes.get(
+  '/workspaces/:tenantId',
+  authorizeOperator('support', 'billing', 'security'),
+  validate(platformWorkspaceSchema),
+  platformOpsController.workspace,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/suspend',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(governedWorkspaceActionSchema),
+  platformOpsController.suspendWorkspace,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/reactivate',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(governedWorkspaceActionSchema),
+  platformOpsController.reactivateWorkspace,
+);
+platformOpsRoutes.get(
+  '/memberships',
+  authorizeOperator('security'),
+  validate(platformListSchema),
+  platformOpsController.memberships,
+);
+platformOpsRoutes.patch(
+  '/workspaces/:tenantId/memberships/:membershipId',
+  authorizeOperator('security'),
+  requireFreshOperatorMfa,
+  validate(governedMembershipActionSchema),
+  platformOpsController.updateMembership,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/invitations',
+  authorizeOperator('security'),
+  requireFreshOperatorMfa,
+  validate(inviteMemberSchema),
+  platformOpsController.inviteMember,
+);
+platformOpsRoutes.delete(
+  '/workspaces/:tenantId/memberships/:membershipId',
+  authorizeOperator('security'),
+  requireFreshOperatorMfa,
+  validate(governedMembershipDeleteSchema),
+  platformOpsController.removeMembership,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/memberships/:membershipId/reset-mfa',
+  authorizeOperator('security'),
+  requireFreshOperatorMfa,
+  validate(governedMembershipDeleteSchema),
+  platformOpsController.resetMemberMfa,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/trial',
+  authorizeOperator('billing'),
+  requireFreshOperatorMfa,
+  validate(trialAdminSchema),
+  platformOpsController.manageTrial,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/memberships/:membershipId/revoke-sessions',
+  authorizeOperator('security'),
+  requireFreshOperatorMfa,
+  validate(governedMemberCommandSchema),
+  platformOpsController.revokeMemberSessions,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/transfer-ownership',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(governedOwnershipSchema),
+  platformOpsController.transferOwnership,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/invitations/:invitationId/resend',
+  authorizeOperator('security'),
+  validate(governedInvitationSchema),
+  platformOpsController.resendInvitation,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/invitations/:invitationId/revoke',
+  authorizeOperator('security'),
+  requireFreshOperatorMfa,
+  validate(governedInvitationSchema),
+  platformOpsController.revokeInvitation,
+);
+platformOpsRoutes.get(
+  '/billing/subscriptions',
+  authorizeOperator('billing'),
+  validate(platformListSchema),
+  platformOpsController.subscriptions,
+);
+platformOpsRoutes.post(
+  '/billing/subscriptions',
+  authorizeOperator('billing'),
+  requireFreshOperatorMfa,
+  validate(manualSubscriptionSchema),
+  platformOpsController.createManualSubscription,
+);
+platformOpsRoutes.post(
+  '/billing/checkouts',
+  authorizeOperator('billing'),
+  requireFreshOperatorMfa,
+  validate(providerCheckoutSchema),
+  platformOpsController.createProviderCheckout,
+);
+platformOpsRoutes.post(
+  '/billing/subscriptions/:subscriptionId/action',
+  authorizeOperator('billing'),
+  requireFreshOperatorMfa,
+  validate(subscriptionActionSchema),
+  platformOpsController.changeSubscription,
+);
+platformOpsRoutes.get(
+  '/billing/catalog-versions',
+  authorizeOperator('billing'),
+  platformOpsController.catalogs,
+);
+platformOpsRoutes.post(
+  '/billing/catalog-versions',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(catalogCreateSchema),
+  platformOpsController.createCatalog,
+);
+platformOpsRoutes.post(
+  '/billing/catalog-versions/:catalogId/publish',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(catalogPublishSchema),
+  platformOpsController.publishCatalog,
+);
+platformOpsRoutes.get(
+  '/billing/invoices',
+  authorizeOperator('billing'),
+  validate(platformListSchema),
+  platformOpsController.invoices,
+);
+platformOpsRoutes.post(
+  '/billing/invoices',
+  authorizeOperator('billing'),
+  requireFreshOperatorMfa,
+  validate(createInvoiceSchema),
+  platformOpsController.createInvoice,
+);
+platformOpsRoutes.post(
+  '/billing/invoices/:invoiceId/action',
+  authorizeOperator('billing'),
+  requireFreshOperatorMfa,
+  validate(invoiceActionSchema),
+  platformOpsController.invoiceAction,
+);
+platformOpsRoutes.patch(
+  '/billing/invoices/:invoiceId',
+  authorizeOperator('billing'),
+  requireFreshOperatorMfa,
+  validate(updateInvoiceSchema),
+  platformOpsController.updateInvoice,
+);
+platformOpsRoutes.get(
+  '/billing/payment-events',
+  authorizeOperator('billing'),
+  validate(platformListSchema),
+  platformOpsController.paymentEvents,
+);
+platformOpsRoutes.post(
+  '/billing/invoices/:invoiceId/retry-sync',
+  authorizeOperator('billing'),
+  requireFreshOperatorMfa,
+  validate(governedInvoiceSchema),
+  platformOpsController.retryInvoiceSync,
+);
+platformOpsRoutes.get(
+  '/billing/invoices/:invoiceId/download',
+  authorizeOperator('billing'),
+  validate(invoiceDownloadSchema),
+  platformOpsController.invoiceDownload,
+);
+platformOpsRoutes.get(
+  '/access-grants',
+  authorizeOperator('support', 'security'),
+  validate(platformListSchema),
+  platformOpsController.accessGrants,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/access-grants',
+  authorizeOperator('support'),
+  requireFreshOperatorMfa,
+  validate(governedAccessRequestSchema),
+  platformOpsController.requestAccessGrant,
+);
+platformOpsRoutes.post(
+  '/access-grants/:grantId/revoke',
+  authorizeOperator('security'),
+  requireFreshOperatorMfa,
+  validate(governedAccessGrantSchema),
+  platformOpsController.revokeAccessGrant,
+);
+platformOpsRoutes.get(
+  '/audit-events',
+  authorizeOperator('security'),
+  validate(platformListSchema),
+  platformOpsController.auditEvents,
+);
+platformOpsRoutes.get(
+  '/security-events',
+  authorizeOperator('security'),
+  validate(platformListSchema),
+  platformOpsController.securityEvents,
+);
+platformOpsRoutes.get(
+  '/workspace-security',
+  authorizeOperator('support', 'security'),
+  validate(platformListSchema),
+  platformOpsController.workspaceSecurity,
+);
+platformOpsRoutes.get(
+  '/operators',
+  authorizeOperator('platform_admin'),
+  platformOpsController.operators,
+);
+platformOpsRoutes.post(
+  '/operators',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(operatorInviteSchema),
+  platformOpsController.inviteOperator,
+);
+platformOpsRoutes.patch(
+  '/operators/:operatorId',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(operatorUpdateSchema),
+  platformOpsController.updateOperator,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/domains',
+  authorizeOperator('security'),
+  requireFreshOperatorMfa,
+  validate(adminDomainCreateSchema),
+  platformOpsController.requestDomain,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/domains/:domainId/action',
+  authorizeOperator('security'),
+  requireFreshOperatorMfa,
+  validate(adminDomainActionSchema),
+  platformOpsController.domainAction,
+);
+platformOpsRoutes.put(
+  '/workspaces/:tenantId/sso',
+  authorizeOperator('security'),
+  requireFreshOperatorMfa,
+  validate(adminSsoSchema),
+  platformOpsController.configureSso,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/provider-credentials',
+  authorizeOperator('security'),
+  requireFreshOperatorMfa,
+  validate(adminProviderSchema),
+  platformOpsController.putProviderCredential,
+);
+platformOpsRoutes.delete(
+  '/workspaces/:tenantId/provider-credentials/:provider',
+  authorizeOperator('security'),
+  requireFreshOperatorMfa,
+  validate(adminProviderDeleteSchema),
+  platformOpsController.removeProviderCredential,
+);
+platformOpsRoutes.get(
+  '/provisioning-jobs',
+  authorizeOperator('support'),
+  validate(platformListSchema),
+  platformOpsController.provisioningJobs,
+);
+platformOpsRoutes.get(
+  '/migration-rollouts',
+  authorizeOperator('platform_admin'),
+  validate(platformListSchema),
+  platformOpsController.migrationRollouts,
+);
+platformOpsRoutes.get(
+  '/backups',
+  authorizeOperator('platform_admin'),
+  validate(platformListSchema),
+  platformOpsController.backups,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/backups',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(governedTenantSchema),
+  platformOpsController.triggerBackup,
+);
+platformOpsRoutes.get(
+  '/lifecycle',
+  authorizeOperator('platform_admin'),
+  validate(platformListSchema),
+  platformOpsController.lifecycle,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/deletion',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(governedWorkspaceActionSchema),
+  platformOpsController.scheduleDeletion,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/deletion/cancel',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(governedWorkspaceActionSchema),
+  platformOpsController.cancelDeletion,
+);
+platformOpsRoutes.post(
+  '/exports/:exportId/retry',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(governedExportSchema),
+  platformOpsController.retryExport,
+);
+platformOpsRoutes.post(
+  '/workspaces/:tenantId/exports',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(adminExportCreateSchema),
+  platformOpsController.createExport,
+);
+platformOpsRoutes.post(
+  '/deletions/:deletionId/retry',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(adminDeletionRetrySchema),
+  platformOpsController.retryDeletion,
+);
+platformOpsRoutes.post(
+  '/migration-rollouts',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(adminMigrationCreateSchema),
+  platformOpsController.createMigrationDraft,
+);
+platformOpsRoutes.post(
+  '/migration-rollouts/:rolloutId/action',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(adminMigrationActionSchema),
+  platformOpsController.migrationAction,
+);
+platformOpsRoutes.post(
+  '/provisioning-jobs/:jobId/action',
+  authorizeOperator('support'),
+  requireFreshOperatorMfa,
+  validate(adminProvisioningActionSchema),
+  platformOpsController.provisioningAction,
+);
+platformOpsRoutes.get('/dashboard', platformOpsController.dashboard);
+platformOpsRoutes.get('/readiness', platformOpsController.readiness);
+platformOpsRoutes.get(
+  '/tenants',
+  authorizeOperator('support', 'security'),
+  platformOpsController.tenants,
+);
+platformOpsRoutes.post(
+  '/tenants/:id/provisioning/retry',
+  authorizeOperator('support'),
+  requireFreshOperatorMfa,
+  validate(tenantOpsIdSchema),
+  platformOpsController.retryProvisioning,
+);
+platformOpsRoutes.post(
+  '/tenants/:id/access-grants',
+  authorizeOperator('support'),
+  requireFreshOperatorMfa,
+  validate(accessRequestSchema),
+  platformOpsController.requestAccess,
+);
+platformOpsRoutes.post(
+  '/billing/reconcile',
+  authorizeOperator('billing'),
+  requireFreshOperatorMfa,
+  validate(governedBillingSchema),
+  platformOpsController.governedBillingReconcile,
+);
+platformOpsRoutes.get(
+  '/migrations',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  platformOpsController.migrations,
+);
+platformOpsRoutes.post(
+  '/migrations',
+  authorizeOperator('platform_admin'),
+  validate(migrationCreateSchema),
+  platformOpsController.createMigration,
+);
+platformOpsRoutes.post(
+  '/migrations/:id/advance',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(rolloutIdSchema),
+  platformOpsController.advanceMigration,
+);
+platformOpsRoutes.post(
+  '/migrations/:id/retry',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(rolloutIdSchema),
+  platformOpsController.retryMigration,
+);
+platformOpsRoutes.post(
+  '/backups/restore-drill',
+  authorizeOperator('platform_admin'),
+  requireFreshOperatorMfa,
+  validate(restoreDrillSchema),
+  platformOpsController.restoreDrill,
+);

@@ -1,0 +1,2948 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MooN – 44 WhatsApp Banners Dashboard & Live Editor</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;1,400&family=Montserrat:wght@700;800&family=Outfit:wght@600;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ═══ PREMIUM STYLING SYSTEM ═══ */
+      :root {
+        --bg-main: #ffffff;
+        --bg-card: #ffffff;
+        --bg-input: #f9fafb;
+        --border: rgba(0, 0, 0, 0.1);
+        --border-active: #8b5cf6;
+        --primary: #8b5cf6;
+        --primary-glow: rgba(139, 92, 246, 0.35);
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --text-primary: #111827;
+        --text-secondary: #4b5563;
+        --text-muted: #6b7280;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg-main);
+        color: var(--text-primary);
+        font-family: 'DM Sans', sans-serif;
+        padding: 0;
+      }
+
+      .container-inner {
+        max-width: none;
+        width: 100%;
+        margin: 0;
+      }
+
+      h1 {
+        font-family: 'Sora', sans-serif;
+        color: var(--text-primary);
+        font-size: 32px;
+        font-weight: 800;
+        margin-bottom: 6px;
+        letter-spacing: -0.8px;
+      }
+      .subtitle {
+        color: var(--text-secondary);
+        font-size: 14px;
+        margin-bottom: 24px;
+      }
+
+      /* ═══ EXPANDABLE DESIGN REFERENCE PANEL ═══ */
+      .ref-accordion {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        margin-bottom: 32px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+      }
+      .ref-header {
+        padding: 16px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+        font-family: 'Sora', sans-serif;
+        font-weight: 700;
+        font-size: 16px;
+      }
+      .ref-header:hover {
+        background: rgba(0, 0, 0, 0.02);
+      }
+      .ref-toggle-icon {
+        font-size: 14px;
+        transition: transform 0.3s ease;
+      }
+      .ref-accordion.closed .ref-toggle-icon {
+        transform: rotate(-90deg);
+      }
+      .ref-accordion.closed .ref-content {
+        max-height: 0;
+        padding: 0 24px;
+        border-top: 0px solid transparent;
+      }
+      .ref-content {
+        max-height: 2000px;
+        padding: 24px;
+        border-top: 1px solid var(--border);
+        transition: all 0.3s cubic-bezier(0, 1, 0, 1);
+      }
+      .ref-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+      }
+      .ref-card {
+        background: rgba(0, 0, 0, 0.02);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .ref-card-title {
+        font-family: 'Sora', sans-serif;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--primary);
+        margin-bottom: 8px;
+      }
+      .ref-card-text {
+        font-size: 13px;
+        color: var(--text-secondary);
+        line-height: 1.5;
+      }
+
+      /* ═══ FILTER BAR ═══ */
+      .filter-bar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+      }
+      .fbtn {
+        font-size: 12px;
+        font-family: 'DM Sans', sans-serif;
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .fbtn:hover {
+        border-color: #d1d5db;
+        color: #111827;
+      }
+      .fbtn.on {
+        background: #111827;
+        color: #ffffff;
+        border-color: #111827;
+        font-weight: 600;
+      }
+
+      .count {
+        color: var(--text-muted);
+        font-size: 13px;
+        margin-bottom: 16px;
+        font-weight: 500;
+      }
+
+      /* ═══ CARDS GRID (Optimized for 4 cards per row) ═══ */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+      }
+
+      /* Banner Card Wrapper */
+      .card-wrapper {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transition: all 0.25s ease;
+      }
+      .card-wrapper:hover {
+        transform: translateY(-2px);
+        border-color: rgba(0, 0, 0, 0.15);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      }
+
+      /* Standard Banner Card (Compact Layout) */
+      .banner {
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+        aspect-ratio: 1080/566;
+        font-family: 'DM Sans', sans-serif;
+        cursor: default;
+        width: 100%;
+      }
+      .bg-img {
+        position: absolute;
+        inset: 0;
+        background-size: cover;
+        background-position: center;
+        z-index: 0;
+        border-radius: inherit;
+      }
+      .overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        border-radius: inherit;
+      }
+      .content {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        padding: 14px 16px 12px;
+      }
+      .top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+      .logo-wrap img {
+        height: 18px;
+        filter: brightness(0) invert(1);
+        opacity: 0.95;
+      }
+      .mode-badge {
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border-radius: 10px;
+        backdrop-filter: blur(8px);
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      .spacer {
+        flex: 1;
+      }
+      .headline {
+        font-family: 'Sora', sans-serif;
+        font-size: 15px;
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: -0.3px;
+        margin-bottom: 4px;
+        color: #fff;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+      }
+      .supporting {
+        font-size: 10px;
+        line-height: 1.4;
+        margin-bottom: 10px;
+        opacity: 0.88;
+        max-width: 80%;
+      }
+      .bottom-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .cta {
+        font-size: 9px;
+        font-weight: 700;
+        padding: 6px 14px;
+        border-radius: 20px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .trigger {
+        font-size: 8px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        opacity: 0.55;
+        color: #fff;
+      }
+
+      /* Banner Control Action Panel */
+      .banner-actions {
+        display: flex;
+        gap: 6px;
+      }
+      .banner-actions button {
+        flex: 1;
+        padding: 8px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: rgba(0, 0, 0, 0.03);
+        color: var(--text-primary);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+      }
+      .banner-actions button:hover {
+        background: var(--bg-input);
+        border-color: rgba(0, 0, 0, 0.2);
+      }
+      .banner-actions .btn-download {
+        background: var(--primary);
+        color: #fff;
+        border: none;
+      }
+      .banner-actions .btn-download:hover {
+        background: #7c3aed;
+        transform: scale(1.02);
+      }
+
+      /* Live Editor Modal preview specific overrides (Maintains large preview readability) */
+      #editorLiveBannerCard {
+        border-radius: 16px;
+      }
+      #editorLiveBannerCard .content {
+        padding: 22px 24px 20px !important;
+      }
+      #editorLiveBannerCard .logo-wrap img {
+        height: 24px !important;
+      }
+      #editorLiveBannerCard .mode-badge {
+        font-size: 9px !important;
+        padding: 4px 10px !important;
+        border-radius: 12px !important;
+      }
+      #editorLiveBannerCard .headline {
+        font-size: 20px !important;
+        margin-bottom: 6px !important;
+      }
+      #editorLiveBannerCard .supporting {
+        font-size: 12px !important;
+        line-height: 1.5 !important;
+        margin-bottom: 14px !important;
+        max-width: 68% !important;
+      }
+      #editorLiveBannerCard .cta {
+        font-size: 11px !important;
+        padding: 8px 18px !important;
+        border-radius: 30px !important;
+      }
+      #editorLiveBannerCard .trigger {
+        font-size: 9px !important;
+      }
+
+      /* Custom sizes for ratios inside Editor Modal */
+      .preview-container.ratio-square #editorLiveBannerCard .content {
+        padding: 40px 32px 30px !important;
+      }
+      .preview-container.ratio-story #editorLiveBannerCard .content {
+        padding: 50px 36px 40px !important;
+      }
+      .preview-container.ratio-square #editorLiveBannerCard .headline {
+        font-size: 26px !important;
+      }
+      .preview-container.ratio-story #editorLiveBannerCard .headline {
+        font-size: 24px !important;
+      }
+
+      /* Inline Dynamic Design Specs */
+      .inline-specs {
+        background: rgba(0, 0, 0, 0.015);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px;
+        font-size: 12px;
+        display: none;
+        animation: slide-down 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .inline-specs.visible {
+        display: block;
+      }
+      .spec-row {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+      }
+      .spec-row:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+      .spec-label {
+        font-family: 'Sora', sans-serif;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 10px;
+        color: var(--primary);
+        letter-spacing: 0.05em;
+      }
+      .spec-value {
+        color: var(--text-secondary);
+        line-height: 1.4;
+      }
+
+      /* ═══ LIVE EDITOR ACCENT MODAL ═══ */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        padding: 20px;
+      }
+      .modal-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .modal-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        width: 100%;
+        max-width: 1000px;
+        height: 680px; /* Constrain desktop height to enforce scrolling */
+        max-height: 90vh;
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        box-shadow:
+          0 25px 50px rgba(0, 0, 0, 0.6),
+          0 0 40px var(--primary-glow);
+        transform: scale(0.95);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .modal-overlay.visible .modal-card {
+        transform: scale(1);
+      }
+
+      /* Modal Left: Live Interactive Preview */
+      .modal-preview-panel {
+        background: #ffffff;
+        padding: 32px;
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        height: 100%; /* Force height to match grid parent */
+        overflow-y: auto;
+      }
+      .preview-title {
+        font-family: 'Sora', sans-serif;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-secondary);
+      }
+
+      /* Interactive Preview Box */
+      .preview-container {
+        width: 100%;
+        max-width: 480px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      /* Live Ratio Adaptors */
+      .preview-container.ratio-landscape .banner {
+        aspect-ratio: 1080/566;
+      }
+      .preview-container.ratio-square .banner {
+        aspect-ratio: 1/1;
+      }
+      .preview-container.ratio-story .banner {
+        aspect-ratio: 1080/1920;
+        max-height: 480px;
+      }
+      /* Live custom sizes */
+      .preview-container.ratio-square .content {
+        padding: 40px 32px 30px;
+      }
+      .preview-container.ratio-story .content {
+        padding: 50px 36px 40px;
+      }
+      .preview-container.ratio-square .headline {
+        font-size: 26px;
+      }
+      .preview-container.ratio-story .headline {
+        font-size: 24px;
+      }
+
+      /* Ratio Switcher Control Bar */
+      .ratio-switch-bar {
+        display: flex;
+        gap: 6px;
+        background: var(--bg-main);
+        padding: 4px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+      }
+      .ratio-btn {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 6px 14px;
+        background: transparent;
+        color: var(--text-secondary);
+        border: none;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.15s;
+      }
+      .ratio-btn.active {
+        background: var(--bg-card);
+        color: var(--text-primary);
+        box-shadow: var(--shadow-sm);
+      }
+
+      /* Modal Right: Editor Control Panel */
+      .modal-editor-panel {
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        height: 100%; /* Force height to match grid parent */
+        overflow-y: auto;
+      }
+      .editor-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .editor-header h2 {
+        font-family: 'Sora', sans-serif;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: -0.4px;
+      }
+      .close-modal-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 20px;
+        cursor: pointer;
+        transition: color 0.15s;
+      }
+      .close-modal-btn:hover {
+        color: var(--text-primary);
+      }
+
+      /* Form Controls */
+      .editor-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .editor-label {
+        font-family: 'Sora', sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      /* Live Word Counters */
+      .counter-tag {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 10px;
+        text-transform: none;
+      }
+      .counter-tag.ok {
+        background: rgba(16, 185, 129, 0.15);
+        color: var(--success);
+      }
+      .counter-tag.warn {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--warning);
+      }
+      .counter-tag.bad {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--danger);
+      }
+
+      .editor-field input[type='text'],
+      .editor-field select {
+        background: var(--bg-input);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 13px;
+        transition: all 0.2s ease;
+        width: 100%;
+      }
+      .editor-field input[type='text']:focus,
+      .editor-field select:focus {
+        outline: none;
+        border-color: var(--border-active);
+        box-shadow: 0 0 10px rgba(139, 92, 246, 0.15);
+      }
+
+      /* Preset Gradients Row */
+      .gradient-presets {
+        display: flex;
+        gap: 6px;
+      }
+      .grad-preset-btn {
+        flex: 1;
+        height: 24px;
+        border-radius: 6px;
+        border: 1.5px solid var(--border);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .grad-preset-btn:hover {
+        transform: scale(1.05);
+      }
+      .grad-preset-btn.active {
+        border-color: var(--primary);
+        box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+      }
+
+      /* Toast message inside Editor */
+      .editor-warning {
+        font-size: 11px;
+        color: var(--warning);
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        padding: 8px 12px;
+        border-radius: 8px;
+        line-height: 1.4;
+        display: none;
+      }
+      .editor-warning.visible {
+        display: block;
+      }
+
+      /* Download Action in Editor */
+      .editor-footer {
+        display: flex;
+        gap: 12px;
+        margin-top: 10px;
+      }
+      .editor-footer button {
+        padding: 12px;
+        border-radius: 12px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex: 1;
+      }
+      .btn-save-dl {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+      }
+      .btn-save-dl:hover {
+        background: linear-gradient(135deg, #9b72f8 0%, #884ffa 100%);
+        box-shadow: 0 6px 18px rgba(139, 92, 246, 0.6);
+        transform: translateY(-1px);
+      }
+      .btn-cancel {
+        background: rgba(0, 0, 0, 0.05);
+        color: var(--text-primary);
+        border: 1px solid var(--border);
+      }
+      .btn-cancel:hover {
+        background: rgba(0, 0, 0, 0.08);
+      }
+
+      /* ═══ RESPONSIVE ═══ */
+      @media (max-width: 1000px) {
+        .modal-card {
+          grid-template-columns: 1fr;
+          height: auto;
+          max-height: 95vh;
+          overflow-y: auto;
+        }
+        .modal-preview-panel {
+          border-right: none;
+          border-bottom: 1px solid var(--border);
+          padding: 20px;
+          height: auto;
+          overflow-y: visible;
+        }
+        .modal-editor-panel {
+          padding: 20px;
+          height: auto;
+          overflow-y: visible;
+        }
+      }
+      @media (max-width: 768px) {
+        body {
+          padding: 0;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @keyframes slide-down {
+        from {
+          opacity: 0;
+          transform: translateY(-8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-inner">
+      <!-- Filters & Counter -->
+      <div class="filter-bar" id="fb"></div>
+      <div class="count" id="cnt"></div>
+
+      <!-- Banner Grid -->
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <!-- ═══ MODAL INTERACTIVE EDITOR ═══ -->
+    <div class="modal-overlay" id="editorModal">
+      <div class="modal-card">
+        <!-- Modal Left: Interactive Live Preview -->
+        <div class="modal-preview-panel">
+          <span class="preview-title">Live Preview Container</span>
+
+          <!-- Live Ratio Box -->
+          <div class="preview-container ratio-landscape" id="editorPreviewBox">
+            <!-- Live card will be injected here -->
+          </div>
+
+          <!-- Live Ratio Switches -->
+          <div class="ratio-switch-bar">
+            <button
+              class="ratio-btn active"
+              id="btnRatioLandscape"
+              onclick="setEditorRatio('landscape')"
+            >
+              Landscape (1080x566)
+            </button>
+            <button class="ratio-btn" id="btnRatioSquare" onclick="setEditorRatio('square')">
+              Square (1080x1080)
+            </button>
+            <button class="ratio-btn" id="btnRatioStory" onclick="setEditorRatio('story')">
+              Story (1080x1920)
+            </button>
+          </div>
+        </div>
+
+        <!-- Modal Right: Editor Control Panel -->
+        <div class="modal-editor-panel">
+          <div class="editor-header">
+            <h2 id="editorBannerTitle">Edit Banner</h2>
+            <button class="close-modal-btn" onclick="closeEditor()">&times;</button>
+          </div>
+
+          <!-- Headline -->
+          <div class="editor-field">
+            <label class="editor-label">
+              <span>Headline Text (4-7 words)</span>
+              <span class="counter-tag" id="headCounter">0 words</span>
+            </label>
+            <input type="text" id="editHeadline" oninput="updateLivePreview()" />
+          </div>
+
+          <!-- Supporting Text -->
+          <div class="editor-field">
+            <label class="editor-label">
+              <span>Supporting Text (8-14 words)</span>
+              <span class="counter-tag" id="supportCounter">0 words</span>
+            </label>
+            <input type="text" id="editSupporting" oninput="updateLivePreview()" />
+          </div>
+
+          <!-- CTA Button Text -->
+          <div class="editor-field">
+            <label class="editor-label">
+              <span>CTA Text (2-4 words)</span>
+              <span class="counter-tag" id="ctaCounter">0 words</span>
+            </label>
+            <input type="text" id="editCTA" oninput="updateLivePreview()" />
+          </div>
+
+          <!-- Background Image -->
+          <div class="editor-field">
+            <label class="editor-label">Choose Preset or Upload Background Image</label>
+            <div style="display: flex; gap: 8px; align-items: center">
+              <select id="editBgSelect" onchange="onBgSelectChanged()" style="flex: 1">
+                <option value="custom">-- Custom (URL / Upload) --</option>
+                <option value="beach">🏖️ Beach Escape</option>
+                <option value="luxury">🏨 Luxury Stay</option>
+                <option value="wander">💼 Travel Suitcase / Business</option>
+                <option value="family">👨‍👩‍👧 Family Holiday</option>
+                <option value="couple">👩‍❤️‍👨 Couple Getaway</option>
+                <option value="mountain">🏔️ Mountain Escape</option>
+                <option value="city">🏙️ City Tour</option>
+                <option value="hotel">🛎️ Premium Hotel Lobby</option>
+                <option value="advisor">👔 Personal Travel Advisor</option>
+                <option value="explore">⛵ Outdoor Adventure / Exploring</option>
+                <option value="map">🗺️ Travel Map / Planning</option>
+                <option value="phone">📱 Mobile Phone / WhatsApp</option>
+                <option value="payment">💳 Easy Payment / Trust</option>
+                <option value="itinerary">📋 Itinerary Planner</option>
+                <option value="budget">💰 Budgeting / EMI</option>
+                <option value="notepad">🗒️ Note & Coffee / Calling</option>
+                <option value="group">👥 Happy Travellers / Group</option>
+                <option value="trekking">🥾 Alpine Trekking</option>
+                <option value="desert">🐫 Desert Safari</option>
+                <option value="cruise">🚢 Ocean Cruise</option>
+                <option value="flight">✈️ Airplane / Flight</option>
+                <option value="dining">🍽️ Fine Dining</option>
+                <option value="heritage">🏛️ Heritage Site / Culture</option>
+                <option value="spa">💆 Spa & Pool Relaxation</option>
+                <option value="neon">🌆 Neon City Lights</option>
+                <option value="airport">✈️ Airport / Flight Schedule</option>
+                <option value="passport">🛂 Passport & Camera</option>
+                <option value="urgency">⏰ Clock / Urgency / Fares Rising</option>
+                <option value="celebrate">🎉 Booking Confirmed / Celebrate</option>
+                <option value="luggage">🧳 Luggage / Packing</option>
+                <option value="snorkeling">🤿 Snorkeling / Reef</option>
+                <option value="skiing">⛷️ Skiing / Snowy Slopes</option>
+                <option value="safari">🦁 Safari Wildlife</option>
+                <option value="roadtrip">🚗 Scenic Road Trip</option>
+                <option value="discount">🏷️ Discount / Special Offer</option>
+                <option value="feedback">⭐ Client Feedback / Review</option>
+              </select>
+              <label
+                class="btn-cancel"
+                style="
+                  padding: 10px 14px;
+                  border-radius: 10px;
+                  cursor: pointer;
+                  text-align: center;
+                  font-size: 13px;
+                  font-weight: 600;
+                  white-space: nowrap;
+                  display: inline-block;
+                  margin: 0;
+                  border: 1px solid var(--border);
+                  background: rgba(255, 255, 255, 0.05);
+                  color: var(--text-primary);
+                  transition: background 0.2s;
+                "
+              >
+                📤 Upload File
+                <input
+                  type="file"
+                  id="editBgFile"
+                  accept="image/*"
+                  onchange="onBgFileSelected()"
+                  style="display: none"
+                />
+              </label>
+            </div>
+          </div>
+
+          <!-- Custom Image URL -->
+          <div class="editor-field" id="customUrlField">
+            <label class="editor-label">Custom Image URL</label>
+            <input
+              type="text"
+              id="editBgUrl"
+              oninput="onCustomBgUrlChanged()"
+              placeholder="https://unsplash.com/..."
+            />
+          </div>
+
+          <!-- Gradient Overlay Presets -->
+          <div class="editor-field">
+            <label class="editor-label">Gradient Overlay Scheme</label>
+            <div class="gradient-presets" style="display: flex; gap: 6px; flex-wrap: wrap">
+              <button
+                class="grad-preset-btn"
+                style="background: linear-gradient(135deg, #0a281e, #05140f)"
+                onclick="setPresetGradient('emerald')"
+                id="gp-emerald"
+                title="Deep Emerald"
+              ></button>
+              <button
+                class="grad-preset-btn"
+                style="background: linear-gradient(135deg, #0a193c, #050c23)"
+                onclick="setPresetGradient('indigo')"
+                id="gp-indigo"
+                title="Deep Indigo"
+              ></button>
+              <button
+                class="grad-preset-btn"
+                style="background: linear-gradient(135deg, #280a46, #140528)"
+                onclick="setPresetGradient('violet')"
+                id="gp-violet"
+                title="Deep Violet"
+              ></button>
+              <button
+                class="grad-preset-btn"
+                style="background: linear-gradient(135deg, #1c1200, #100a00)"
+                onclick="setPresetGradient('amber')"
+                id="gp-amber"
+                title="Deep Amber"
+              ></button>
+              <button
+                class="grad-preset-btn"
+                style="background: linear-gradient(135deg, #1e0e1c, #100610)"
+                onclick="setPresetGradient('dusk')"
+                id="gp-dusk"
+                title="Dusk Rose"
+              ></button>
+              <button
+                class="grad-preset-btn"
+                style="background: linear-gradient(135deg, #1e0808, #120404)"
+                onclick="setPresetGradient('crimson')"
+                id="gp-crimson"
+                title="Crimson Urgency"
+              ></button>
+              <button
+                class="grad-preset-btn"
+                style="background: linear-gradient(135deg, #052328, #031214)"
+                onclick="setPresetGradient('teal')"
+                id="gp-teal"
+                title="Ocean Teal"
+              ></button>
+              <button
+                class="grad-preset-btn"
+                style="background: linear-gradient(135deg, #280f0a, #140805)"
+                onclick="setPresetGradient('sunset')"
+                id="gp-sunset"
+                title="Sunset Gold"
+              ></button>
+              <button
+                class="grad-preset-btn"
+                style="background: linear-gradient(135deg, #0f230a, #081205)"
+                onclick="setPresetGradient('forest')"
+                id="gp-forest"
+                title="Forest Green"
+              ></button>
+              <button
+                class="grad-preset-btn"
+                style="background: linear-gradient(135deg, #050a23, #020512)"
+                onclick="setPresetGradient('midnight')"
+                id="gp-midnight"
+                title="Midnight Blue"
+              ></button>
+              <button
+                class="grad-preset-btn"
+                style="background: linear-gradient(135deg, #1e081e, #0f040f)"
+                onclick="setPresetGradient('plum')"
+                id="gp-plum"
+                title="Deep Plum"
+              ></button>
+            </div>
+          </div>
+
+          <!-- Typography & Text Styles -->
+          <div
+            class="editor-field"
+            style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px"
+          >
+            <div>
+              <label class="editor-label">Font Family</label>
+              <select id="editFontFamily" onchange="updateLivePreview()">
+                <option value="'Sora', sans-serif">Sora (Modern Bold)</option>
+                <option value="'DM Sans', sans-serif">DM Sans (Clean Sans)</option>
+                <option value="'Playfair Display', serif">Playfair Display (Serif)</option>
+                <option value="'Montserrat', sans-serif">Montserrat (Geometric)</option>
+                <option value="'Outfit', sans-serif">Outfit (Sleek Round)</option>
+              </select>
+            </div>
+            <div>
+              <label class="editor-label">Text Shade (Color)</label>
+              <div style="display: flex; gap: 6px; align-items: center">
+                <select id="editTextColor" onchange="onTextColorSelectChanged()" style="flex: 1">
+                  <option value="#ffffff">⚪ White</option>
+                  <option value="#f3f4f6">⚪ Light Gray</option>
+                  <option value="#fcd34d">🟡 Gold</option>
+                  <option value="#60a5fa">🔵 Sky Blue</option>
+                  <option value="#f472b6">💗 Pink</option>
+                  <option value="custom">🎨 Custom...</option>
+                </select>
+                <input
+                  type="color"
+                  id="editTextColorPicker"
+                  oninput="onTextColorPickerChanged()"
+                  value="#ffffff"
+                  style="
+                    width: 38px;
+                    height: 36px;
+                    padding: 0;
+                    border: 1px solid var(--border);
+                    border-radius: 8px;
+                    cursor: pointer;
+                    background: transparent;
+                    display: none;
+                  "
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Accent Color & Button Customizer -->
+          <div
+            class="editor-field"
+            style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px"
+          >
+            <div>
+              <label class="editor-label">Accent / Button Color</label>
+              <div style="display: flex; gap: 6px; align-items: center">
+                <select
+                  id="editAccentColor"
+                  onchange="onAccentColorSelectChanged()"
+                  style="flex: 1"
+                >
+                  <option value="default">✨ Default Banner Accent</option>
+                  <option value="#52d9a0">🟢 Emerald Green</option>
+                  <option value="#6ab0ff">🔵 Sky Blue</option>
+                  <option value="#c98bff">🟣 Violet Purple</option>
+                  <option value="#ffb84d">🟠 Amber Orange</option>
+                  <option value="#ff7676">🔴 Soft Crimson</option>
+                  <option value="custom">🎨 Custom...</option>
+                </select>
+                <input
+                  type="color"
+                  id="editAccentColorPicker"
+                  oninput="onAccentColorPickerChanged()"
+                  value="#8b5cf6"
+                  style="
+                    width: 38px;
+                    height: 36px;
+                    padding: 0;
+                    border: 1px solid var(--border);
+                    border-radius: 8px;
+                    cursor: pointer;
+                    background: transparent;
+                    display: none;
+                  "
+                />
+              </div>
+            </div>
+            <div>
+              <label class="editor-label">Headline Size</label>
+              <select id="editFontSize" onchange="updateLivePreview()">
+                <option value="default">Default</option>
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Layout & Alignment Models -->
+          <div
+            class="editor-field"
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
+          >
+            <div>
+              <label class="editor-label">Text Alignment</label>
+              <select id="editTextAlign" onchange="updateLivePreview()">
+                <option value="left">Left Align</option>
+                <option value="center">Center Align</option>
+                <option value="right">Right Align</option>
+              </select>
+            </div>
+            <div>
+              <label class="editor-label">Vertical Position</label>
+              <select id="editTextValign" onchange="updateLivePreview()">
+                <option value="flex-end">Bottom (Default)</option>
+                <option value="center">Middle</option>
+                <option value="flex-start">Top</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Hide Elements on Download Checkboxes -->
+          <div
+            class="editor-field"
+            style="
+              background: rgba(255, 255, 255, 0.01);
+              border: 1px solid var(--border);
+              border-radius: 12px;
+              padding: 12px;
+            "
+          >
+            <label
+              class="editor-label"
+              style="margin-bottom: 8px; font-weight: 800; color: var(--primary)"
+              >Hide Elements on Download</label
+            >
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px 16px;
+                font-size: 11px;
+                color: var(--text-secondary);
+              "
+            >
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 6px;
+                  cursor: pointer;
+                  user-select: none;
+                "
+              >
+                <input type="checkbox" id="hideLogo" onchange="updateLivePreview()" /> Hide Logo
+              </label>
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 6px;
+                  cursor: pointer;
+                  user-select: none;
+                "
+              >
+                <input type="checkbox" id="hideMode" onchange="updateLivePreview()" /> Hide Mode
+                Badge
+              </label>
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 6px;
+                  cursor: pointer;
+                  user-select: none;
+                "
+              >
+                <input type="checkbox" id="hideMeta" onchange="updateLivePreview()" /> Hide Stage
+                Tag
+              </label>
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 6px;
+                  cursor: pointer;
+                  user-select: none;
+                "
+              >
+                <input type="checkbox" id="hideCTA" onchange="updateLivePreview()" /> Hide CTA
+                Button
+              </label>
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 6px;
+                  cursor: pointer;
+                  user-select: none;
+                "
+              >
+                <input type="checkbox" id="hideTrigger" onchange="updateLivePreview()" /> Hide
+                Trigger Text
+              </label>
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 6px;
+                  cursor: pointer;
+                  user-select: none;
+                "
+              >
+                <input type="checkbox" id="hideDeco" onchange="updateLivePreview()" /> Hide Decors
+                (Circles)
+              </label>
+            </div>
+          </div>
+
+          <!-- Rule warnings banner -->
+          <div class="editor-warning" id="editorWarningBox">
+            ⚠️ Warning banner message inside editor
+          </div>
+
+          <!-- Footer Buttons -->
+          <div class="editor-footer">
+            <button class="btn-cancel" onclick="closeEditor()">Cancel</button>
+            <button class="btn-save-dl" onclick="downloadEditedBanner()">⬇ Download PNG</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+      const LOGO = '/logo.png';
+
+      const IMG = {
+        beach: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1080&q=80',
+        family: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=1080&q=80',
+        couple: 'https://images.unsplash.com/photo-1516939884455-1445c8652f83?w=1080&q=80',
+        mountain: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1080&q=80',
+        city: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1080&q=80',
+        hotel: 'https://images.unsplash.com/photo-1506059612708-99d6128b8b2b?w=1080&q=80',
+        map: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1080&q=80',
+        phone: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1080&q=80',
+        advisor: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=1080&q=80',
+        luxury: 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=1080&q=80',
+        wander: 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1080&q=80',
+        suitcase: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1080&q=80',
+        payment: 'https://images.unsplash.com/photo-1556742044-3c52d6e88c62?w=1080&q=80',
+        trust: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1080&q=80',
+        calendar: 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=1080&q=80',
+        wa: 'https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=1080&q=80',
+        explore: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1080&q=80',
+        itinerary: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1080&q=80',
+        budget: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=1080&q=80',
+        notepad: 'https://images.unsplash.com/photo-1484981138541-3d074aa97716?w=1080&q=80',
+        group: 'https://images.unsplash.com/photo-1527631746610-bca00a040d60?w=1080&q=80',
+        trekking: 'https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=1080&q=80',
+        desert: 'https://images.unsplash.com/photo-1547234935-80c7145ec969?w=1080&q=80',
+        cruise: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?w=1080&q=80',
+        flight: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1080&q=80',
+        dining: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1080&q=80',
+        heritage: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1080&q=80',
+        spa: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1080&q=80',
+        neon: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=1080&q=80',
+        airport: 'https://images.unsplash.com/photo-1530521951415-3dbd6855567a?w=1080&q=80',
+        passport: 'https://images.unsplash.com/photo-1544016768-982d1554f0b9?w=1080&q=80',
+        urgency: 'https://images.unsplash.com/photo-1508962914676-134849a727f0?w=1080&q=80',
+        celebrate: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1080&q=80',
+        luggage: 'https://images.unsplash.com/photo-1581553680321-4fffae59fccd?w=1080&q=80',
+        snorkeling: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1080&q=80',
+        skiing: 'https://images.unsplash.com/photo-1482862549707-f63cb32c5fd9?w=1080&q=80',
+        safari: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?w=1080&q=80',
+        roadtrip: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1080&q=80',
+        discount: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1080&q=80',
+        feedback: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=1080&q=80',
+      };
+
+      const B = [
+        {
+          id: 1,
+          status: 'Lead Created',
+          mode: 'Scheduled',
+          name: 'Fresh Lead Welcome Reminder',
+          headline: 'Your holiday enquiry is received',
+          supporting: 'Our advisor is ready to help you plan the right trip.',
+          cta: 'Reply to Start',
+          trigger: 'Triggers after 1h',
+          img: IMG.couple,
+          grad: 'linear-gradient(135deg,rgba(10,40,30,.85) 0%,rgba(5,20,15,.4) 100%)',
+          accent: '#52d9a0',
+          ctaBg: 'rgba(82,217,160,.9)',
+          ctaText: '#052015',
+          tag: 'Lead Created',
+          tagBg: 'rgba(82,217,160,.2)',
+          tagColor: '#52d9a0',
+          deco: [
+            { w: 200, h: 200, bg: 'rgba(82,217,160,.15)', bot: -60, right: -60 },
+            { w: 80, h: 80, bg: 'rgba(82,217,160,.1)', bot: 80, right: 120 },
+          ],
+        },
+        {
+          id: 2,
+          status: 'Lead Created',
+          mode: 'Scheduled',
+          name: 'Help Us Plan Better',
+          headline: 'Help us plan it better',
+          supporting: 'Share a few details so we can suggest the right holiday.',
+          cta: 'Share Details',
+          trigger: 'Triggers after 4h',
+          img: IMG.map,
+          grad: 'linear-gradient(135deg,rgba(10,25,60,.88) 0%,rgba(5,12,35,.4) 100%)',
+          accent: '#6ab0ff',
+          ctaBg: 'rgba(106,176,255,.9)',
+          ctaText: '#0a1840',
+          tag: 'Lead Created',
+          tagBg: 'rgba(106,176,255,.2)',
+          tagColor: '#6ab0ff',
+          deco: [
+            { w: 180, h: 180, bg: 'rgba(106,176,255,.12)', bot: -50, right: -50 },
+            { w: 70, h: 70, bg: 'rgba(106,176,255,.1)', bot: 70, right: 100 },
+          ],
+        },
+        {
+          id: 3,
+          status: 'Lead Created',
+          mode: 'On Demand',
+          name: 'Destination Inspiration',
+          headline: 'Imagine your next holiday',
+          supporting: 'Beautiful stays, experiences and routes — all planned for you.',
+          cta: 'Explore More',
+          trigger: 'Agent triggered',
+          img: IMG.beach,
+          grad: 'linear-gradient(135deg,rgba(40,10,70,.88) 0%,rgba(20,5,40,.4) 100%)',
+          accent: '#c98bff',
+          ctaBg: 'rgba(201,139,255,.9)',
+          ctaText: '#28104a',
+          tag: 'Lead Created',
+          tagBg: 'rgba(201,139,255,.2)',
+          tagColor: '#c98bff',
+          deco: [
+            { w: 220, h: 220, bg: 'rgba(201,139,255,.12)', bot: -70, right: -70 },
+            { w: 90, h: 90, bg: 'rgba(201,139,255,.08)', top: 20, left: 20 },
+          ],
+        },
+        {
+          id: 4,
+          status: 'Call Instant Form',
+          mode: 'Scheduled',
+          name: 'Instant Form Quick Connect',
+          headline: "We're ready to help now",
+          supporting: 'Your trip request is active. Our advisor can connect quickly.',
+          cta: 'Answer / Reply',
+          trigger: 'Triggers after 30min',
+          img: IMG.advisor,
+          grad: 'linear-gradient(135deg,rgba(5,30,18,.9) 0%,rgba(3,18,10,.45) 100%)',
+          accent: '#3ddb82',
+          ctaBg: 'rgba(61,219,130,.9)',
+          ctaText: '#031a0a',
+          tag: 'Instant Form',
+          tagBg: 'rgba(61,219,130,.2)',
+          tagColor: '#3ddb82',
+          deco: [{ w: 160, h: 160, bg: 'rgba(61,219,130,.15)', bot: -40, right: -40 }],
+        },
+        {
+          id: 5,
+          status: 'Call Instant Form',
+          mode: 'Scheduled',
+          name: 'Could Not Reach Instant Lead',
+          headline: 'We tried reaching you',
+          supporting: "Share a convenient time and we'll call you back right away.",
+          cta: 'Send Callback Time',
+          trigger: 'After 1 missed call',
+          img: IMG.phone,
+          grad: 'linear-gradient(135deg,rgba(40,22,5,.9) 0%,rgba(25,12,3,.45) 100%)',
+          accent: '#ffb84d',
+          ctaBg: 'rgba(255,184,77,.9)',
+          ctaText: '#1e0e03',
+          tag: 'Instant Form',
+          tagBg: 'rgba(255,184,77,.2)',
+          tagColor: '#ffb84d',
+          deco: [{ w: 160, h: 160, bg: 'rgba(255,184,77,.12)', bot: -40, right: -40 }],
+        },
+        {
+          id: 6,
+          status: 'Call Instant Form',
+          mode: 'On Demand',
+          name: 'Quick Advisor Callback',
+          headline: 'Talk to a travel advisor',
+          supporting: 'A quick call can make your holiday planning much easier.',
+          cta: 'Request Callback',
+          trigger: 'Agent triggered',
+          img: IMG.advisor,
+          grad: 'linear-gradient(135deg,rgba(12,25,50,.9) 0%,rgba(6,14,30,.45) 100%)',
+          accent: '#5db0ff',
+          ctaBg: 'rgba(93,176,255,.9)',
+          ctaText: '#06141e',
+          tag: 'Instant Form',
+          tagBg: 'rgba(93,176,255,.2)',
+          tagColor: '#5db0ff',
+          deco: [{ w: 160, h: 160, bg: 'rgba(93,176,255,.12)', bot: -40, right: -40 }],
+        },
+        {
+          id: 7,
+          status: 'Initiated (Probe)',
+          mode: 'Scheduled',
+          name: 'Soft Welcome Reminder',
+          headline: 'Still planning your trip?',
+          supporting: "We're here when you're ready to shape your travel plan.",
+          cta: 'Continue Planning',
+          trigger: 'After 2h age',
+          img: IMG.suitcase,
+          grad: 'linear-gradient(135deg,rgba(20,28,38,.9) 0%,rgba(10,16,22,.45) 100%)',
+          accent: '#88b8e0',
+          ctaBg: 'rgba(136,184,224,.9)',
+          ctaText: '#101820',
+          tag: 'Probe',
+          tagBg: 'rgba(136,184,224,.2)',
+          tagColor: '#88b8e0',
+          deco: [{ w: 170, h: 170, bg: 'rgba(136,184,224,.1)', bot: -45, right: -45 }],
+        },
+        {
+          id: 8,
+          status: 'Initiated (Probe)',
+          mode: 'Scheduled',
+          name: 'Help Us Plan Better',
+          headline: 'Help us plan it better',
+          supporting: 'Share a few details so we can suggest the right holiday.',
+          cta: 'Share Details',
+          trigger: 'After 6h age',
+          img: IMG.map,
+          grad: 'linear-gradient(135deg,rgba(10,25,60,.88) 0%,rgba(5,12,35,.4) 100%)',
+          accent: '#6ab0ff',
+          ctaBg: 'rgba(106,176,255,.9)',
+          ctaText: '#0a1840',
+          tag: 'Probe',
+          tagBg: 'rgba(106,176,255,.2)',
+          tagColor: '#6ab0ff',
+          deco: [{ w: 170, h: 170, bg: 'rgba(106,176,255,.1)', bot: -45, right: -45 }],
+        },
+        {
+          id: 9,
+          status: 'Initiated (Probe)',
+          mode: 'On Demand',
+          name: 'Destination Inspiration',
+          headline: 'Imagine your next holiday',
+          supporting: 'Beautiful stays, experiences and routes — all planned for you.',
+          cta: 'Explore More',
+          trigger: 'Agent triggered',
+          img: IMG.beach,
+          grad: 'linear-gradient(135deg,rgba(40,10,70,.85) 0%,rgba(20,5,40,.4) 100%)',
+          accent: '#c98bff',
+          ctaBg: 'rgba(201,139,255,.9)',
+          ctaText: '#28104a',
+          tag: 'Probe',
+          tagBg: 'rgba(201,139,255,.2)',
+          tagColor: '#c98bff',
+          deco: [{ w: 200, h: 200, bg: 'rgba(201,139,255,.1)', bot: -60, right: -60 }],
+        },
+        {
+          id: 10,
+          status: 'In Progress (Probe)',
+          mode: 'Scheduled',
+          name: 'Continue Your Trip Plan',
+          headline: 'Continue your trip plan',
+          supporting: 'Your holiday planning is already in progress with us.',
+          cta: 'Resume Chat',
+          trigger: 'After 2h idle',
+          img: IMG.wander,
+          grad: 'linear-gradient(135deg,rgba(5,22,38,.9) 0%,rgba(3,12,22,.45) 100%)',
+          accent: '#4db8e8',
+          ctaBg: 'rgba(77,184,232,.9)',
+          ctaText: '#031220',
+          tag: 'In Progress',
+          tagBg: 'rgba(77,184,232,.2)',
+          tagColor: '#4db8e8',
+          deco: [{ w: 170, h: 170, bg: 'rgba(77,184,232,.12)', bot: -45, right: -45 }],
+        },
+        {
+          id: 11,
+          status: 'In Progress (Probe)',
+          mode: 'Scheduled',
+          name: 'Quick Preference Reminder',
+          headline: 'A few choices needed',
+          supporting: 'Dates, pax, budget or style will help us tailor the plan.',
+          cta: 'Share Preferences',
+          trigger: 'After 6h idle',
+          img: IMG.hotel,
+          grad: 'linear-gradient(135deg,rgba(35,18,8,.9) 0%,rgba(20,10,4,.45) 100%)',
+          accent: '#f0a060',
+          ctaBg: 'rgba(240,160,96,.9)',
+          ctaText: '#1e0e04',
+          tag: 'In Progress',
+          tagBg: 'rgba(240,160,96,.2)',
+          tagColor: '#f0a060',
+          deco: [{ w: 170, h: 170, bg: 'rgba(240,160,96,.1)', bot: -45, right: -45 }],
+        },
+        {
+          id: 12,
+          status: 'In Progress (Probe)',
+          mode: 'On Demand',
+          name: 'Choose Your Travel Style',
+          headline: 'Choose your travel style',
+          supporting: 'Tell us the holiday mood you prefer.',
+          cta: 'Pick Your Style',
+          trigger: 'Agent triggered',
+          img: IMG.explore,
+          grad: 'linear-gradient(135deg,rgba(20,8,42,.9) 0%,rgba(10,4,25,.45) 100%)',
+          accent: '#a878ff',
+          ctaBg: 'rgba(168,120,255,.9)',
+          ctaText: '#100828',
+          tag: 'In Progress',
+          tagBg: 'rgba(168,120,255,.2)',
+          tagColor: '#a878ff',
+          deco: [{ w: 170, h: 170, bg: 'rgba(168,120,255,.1)', bot: -45, right: -45 }],
+        },
+        {
+          id: 13,
+          status: 'Link Clicked (Probe)',
+          mode: 'Scheduled',
+          name: 'Thanks For Checking Details',
+          headline: 'Thanks for checking details',
+          supporting: 'We can help you with the next step or any questions.',
+          cta: 'Ask Us',
+          trigger: 'After 2h idle',
+          img: IMG.family,
+          grad: 'linear-gradient(135deg,rgba(5,28,20,.9) 0%,rgba(3,16,10,.45) 100%)',
+          accent: '#40d4a0',
+          ctaBg: 'rgba(64,212,160,.9)',
+          ctaText: '#031a0a',
+          tag: 'Link Clicked',
+          tagBg: 'rgba(64,212,160,.2)',
+          tagColor: '#40d4a0',
+          deco: [{ w: 160, h: 160, bg: 'rgba(64,212,160,.12)', bot: -40, right: -40 }],
+        },
+        {
+          id: 14,
+          status: 'Link Clicked (Probe)',
+          mode: 'On Demand',
+          name: 'Explore More Options',
+          headline: 'Want better options?',
+          supporting: 'We can show choices that match your dates and budget.',
+          cta: 'Ask for Options',
+          trigger: 'Agent triggered',
+          img: IMG.city,
+          grad: 'linear-gradient(135deg,rgba(10,24,38,.9) 0%,rgba(5,12,22,.45) 100%)',
+          accent: '#60b0e8',
+          ctaBg: 'rgba(96,176,232,.9)',
+          ctaText: '#0a1420',
+          tag: 'Link Clicked',
+          tagBg: 'rgba(96,176,232,.2)',
+          tagColor: '#60b0e8',
+          deco: [{ w: 160, h: 160, bg: 'rgba(96,176,232,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 15,
+          status: 'Completed (Probe)',
+          mode: 'Scheduled',
+          name: 'Ready To Prepare Quote',
+          headline: 'Ready to prepare your quote',
+          supporting: "Confirm your details and we'll prepare the right travel plan.",
+          cta: 'Confirm Details',
+          trigger: 'After 2h idle',
+          img: IMG.hotel,
+          grad: 'linear-gradient(135deg,rgba(8,28,14,.9) 0%,rgba(4,16,8,.45) 100%)',
+          accent: '#5ed87a',
+          ctaBg: 'rgba(94,216,122,.9)',
+          ctaText: '#04100a',
+          tag: 'Completed',
+          tagBg: 'rgba(94,216,122,.2)',
+          tagColor: '#5ed87a',
+          deco: [{ w: 160, h: 160, bg: 'rgba(94,216,122,.12)', bot: -40, right: -40 }],
+        },
+        {
+          id: 16,
+          status: 'Completed (Probe)',
+          mode: 'On Demand',
+          name: 'Confirm Your Preferences',
+          headline: 'Confirm your preferences',
+          supporting: 'A quick confirmation helps us avoid preparing a wrong quote.',
+          cta: 'Confirm / Correct',
+          trigger: 'Agent triggered',
+          img: IMG.map,
+          grad: 'linear-gradient(135deg,rgba(28,18,0,.9) 0%,rgba(16,10,0,.45) 100%)',
+          accent: '#e8b830',
+          ctaBg: 'rgba(232,184,48,.9)',
+          ctaText: '#160e00',
+          tag: 'Completed',
+          tagBg: 'rgba(232,184,48,.2)',
+          tagColor: '#e8b830',
+          deco: [{ w: 160, h: 160, bg: 'rgba(232,184,48,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 17,
+          status: 'Call eQuoted',
+          mode: 'Scheduled',
+          name: 'eQuote Review Reminder',
+          headline: 'Your quote is ready',
+          supporting: 'Please review your initial holiday quote and reply with questions.',
+          cta: 'Review Quote',
+          trigger: 'After 2h idle',
+          img: IMG.luxury,
+          grad: 'linear-gradient(135deg,rgba(8,16,42,.9) 0%,rgba(4,8,25,.45) 100%)',
+          accent: '#6888ff',
+          ctaBg: 'rgba(104,136,255,.9)',
+          ctaText: '#080e28',
+          tag: 'eQuoted',
+          tagBg: 'rgba(104,136,255,.2)',
+          tagColor: '#6888ff',
+          deco: [{ w: 180, h: 180, bg: 'rgba(104,136,255,.1)', bot: -50, right: -50 }],
+        },
+        {
+          id: 18,
+          status: 'Call eQuoted',
+          mode: 'Scheduled',
+          name: 'Need Help Understanding Quote',
+          headline: 'Need help with your quote?',
+          supporting: 'We can simplify the details and explain inclusions for you.',
+          cta: 'Ask Questions',
+          trigger: 'After 8h idle',
+          img: IMG.advisor,
+          grad: 'linear-gradient(135deg,rgba(5,20,28,.9) 0%,rgba(3,12,18,.45) 100%)',
+          accent: '#40a8d8',
+          ctaBg: 'rgba(64,168,216,.9)',
+          ctaText: '#031418',
+          tag: 'eQuoted',
+          tagBg: 'rgba(64,168,216,.2)',
+          tagColor: '#40a8d8',
+          deco: [{ w: 160, h: 160, bg: 'rgba(64,168,216,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 19,
+          status: 'Call eQuoted',
+          mode: 'On Demand',
+          name: 'Human Help With eQuote',
+          headline: 'Need human help?',
+          supporting: 'Our advisor can customise this quote specifically for you.',
+          cta: 'Talk to Advisor',
+          trigger: 'Agent triggered',
+          img: IMG.advisor,
+          grad: 'linear-gradient(135deg,rgba(20,8,22,.9) 0%,rgba(12,4,14,.45) 100%)',
+          accent: '#d878c8',
+          ctaBg: 'rgba(216,120,200,.9)',
+          ctaText: '#100814',
+          tag: 'eQuoted',
+          tagBg: 'rgba(216,120,200,.2)',
+          tagColor: '#d878c8',
+          deco: [{ w: 160, h: 160, bg: 'rgba(216,120,200,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 20,
+          status: "Call Couldn't Q",
+          mode: 'Scheduled',
+          name: 'Advisor Will Help You',
+          headline: "We'll help you properly",
+          supporting: 'We prefer the right plan, not a rushed wrong quote.',
+          cta: 'Stay Connected',
+          trigger: 'After 1h idle',
+          img: IMG.map,
+          grad: 'linear-gradient(135deg,rgba(22,22,14,.9) 0%,rgba(12,12,8,.45) 100%)',
+          accent: '#c8c870',
+          ctaBg: 'rgba(200,200,112,.9)',
+          ctaText: '#141408',
+          tag: "Couldn't Q",
+          tagBg: 'rgba(200,200,112,.2)',
+          tagColor: '#c8c870',
+          deco: [{ w: 160, h: 160, bg: 'rgba(200,200,112,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 21,
+          status: "Call Couldn't Q",
+          mode: 'Scheduled',
+          name: 'Need Few More Details',
+          headline: 'Few details are pending',
+          supporting: 'Share the missing inputs so we can create your quote.',
+          cta: 'Send Details',
+          trigger: 'After 4h idle',
+          img: IMG.phone,
+          grad: 'linear-gradient(135deg,rgba(32,16,8,.9) 0%,rgba(18,8,4,.45) 100%)',
+          accent: '#e88050',
+          ctaBg: 'rgba(232,128,80,.9)',
+          ctaText: '#180804',
+          tag: "Couldn't Q",
+          tagBg: 'rgba(232,128,80,.2)',
+          tagColor: '#e88050',
+          deco: [{ w: 160, h: 160, bg: 'rgba(232,128,80,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 22,
+          status: "Call Couldn't Q",
+          mode: 'On Demand',
+          name: 'Human Assisted Planning',
+          headline: "Let's plan this together",
+          supporting: 'A real advisor will help shape the right holiday for you.',
+          cta: 'Continue Chat',
+          trigger: 'Agent triggered',
+          img: IMG.trust,
+          grad: 'linear-gradient(135deg,rgba(6,22,18,.9) 0%,rgba(3,12,10,.45) 100%)',
+          accent: '#50c898',
+          ctaBg: 'rgba(80,200,152,.9)',
+          ctaText: '#031410',
+          tag: "Couldn't Q",
+          tagBg: 'rgba(80,200,152,.2)',
+          tagColor: '#50c898',
+          deco: [{ w: 160, h: 160, bg: 'rgba(80,200,152,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 23,
+          status: 'Quote Sent',
+          mode: 'Scheduled',
+          name: 'Quote Sent Soft Reminder',
+          headline: 'Your quote is ready',
+          supporting: 'Take a look and reply when you have questions.',
+          cta: 'Review & Reply',
+          trigger: 'After 4h idle',
+          img: IMG.luxury,
+          grad: 'linear-gradient(135deg,rgba(8,16,42,.9) 0%,rgba(4,8,25,.45) 100%)',
+          accent: '#6888ff',
+          ctaBg: 'rgba(104,136,255,.9)',
+          ctaText: '#080e28',
+          tag: 'Quote Sent',
+          tagBg: 'rgba(104,136,255,.2)',
+          tagColor: '#6888ff',
+          deco: [{ w: 180, h: 180, bg: 'rgba(104,136,255,.1)', bot: -50, right: -50 }],
+        },
+        {
+          id: 24,
+          status: 'Quote Sent',
+          mode: 'Scheduled',
+          name: 'Simplified Quote View',
+          headline: 'Want a simpler quote?',
+          supporting: 'We can walk you through the inclusions and options.',
+          cta: 'Explain Quote',
+          trigger: 'After 24h age',
+          img: IMG.hotel,
+          grad: 'linear-gradient(135deg,rgba(6,18,30,.9) 0%,rgba(3,10,18,.45) 100%)',
+          accent: '#50a0d8',
+          ctaBg: 'rgba(80,160,216,.9)',
+          ctaText: '#060e16',
+          tag: 'Quote Sent',
+          tagBg: 'rgba(80,160,216,.2)',
+          tagColor: '#50a0d8',
+          deco: [{ w: 160, h: 160, bg: 'rgba(80,160,216,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 25,
+          status: 'Quote Sent',
+          mode: 'Scheduled',
+          name: 'Value & Inclusion Reminder',
+          headline: "Don't compare only price",
+          supporting: 'Check inclusions, hotel quality, transfers and support before deciding.',
+          cta: 'Compare Value',
+          trigger: 'After 48h age',
+          img: IMG.luxury,
+          grad: 'linear-gradient(135deg,rgba(28,16,0,.9) 0%,rgba(16,8,0,.45) 100%)',
+          accent: '#f0a840',
+          ctaBg: 'rgba(240,168,64,.9)',
+          ctaText: '#160800',
+          tag: 'Quote Sent',
+          tagBg: 'rgba(240,168,64,.2)',
+          tagColor: '#f0a840',
+          deco: [{ w: 170, h: 170, bg: 'rgba(240,168,64,.1)', bot: -45, right: -45 }],
+        },
+        {
+          id: 26,
+          status: 'Quote Sent',
+          mode: 'Scheduled',
+          name: 'WhatsApp Quote Follow-up',
+          headline: 'Still reviewing your quote?',
+          supporting: "We're available here to help with your travel plan.",
+          cta: 'Reply Here',
+          trigger: 'After 2 WA ghosts',
+          img: IMG.wa,
+          grad: 'linear-gradient(135deg,rgba(3,22,10,.92) 0%,rgba(2,12,6,.5) 100%)',
+          accent: '#25d366',
+          ctaBg: 'rgba(37,211,102,.9)',
+          ctaText: '#021008',
+          tag: 'Quote Sent',
+          tagBg: 'rgba(37,211,102,.2)',
+          tagColor: '#25d366',
+          deco: [{ w: 160, h: 160, bg: 'rgba(37,211,102,.12)', bot: -40, right: -40 }],
+        },
+        {
+          id: 27,
+          status: 'Quote Sent',
+          mode: 'Scheduled',
+          name: 'Call Missed Quote Reminder',
+          headline: 'We tried calling you',
+          supporting: 'Share a convenient time to discuss your quote.',
+          cta: 'Send Time',
+          trigger: 'After 2 call ghosts',
+          img: IMG.phone,
+          grad: 'linear-gradient(135deg,rgba(14,14,24,.9) 0%,rgba(8,8,16,.45) 100%)',
+          accent: '#8888f8',
+          ctaBg: 'rgba(136,136,248,.9)',
+          ctaText: '#080814',
+          tag: 'Quote Sent',
+          tagBg: 'rgba(136,136,248,.2)',
+          tagColor: '#8888f8',
+          deco: [{ w: 160, h: 160, bg: 'rgba(136,136,248,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 28,
+          status: 'Quote Sent',
+          mode: 'On Demand',
+          name: 'EMI / Easy Payment Option',
+          headline: 'Plan with easier payments',
+          supporting: 'Ask us about comfortable payment options for your holiday.',
+          cta: 'Ask About EMI',
+          trigger: 'Agent triggered',
+          img: IMG.payment,
+          grad: 'linear-gradient(135deg,rgba(5,24,12,.9) 0%,rgba(3,14,6,.45) 100%)',
+          accent: '#40d870',
+          ctaBg: 'rgba(64,216,112,.9)',
+          ctaText: '#031408',
+          tag: 'Quote Sent',
+          tagBg: 'rgba(64,216,112,.2)',
+          tagColor: '#40d870',
+          deco: [{ w: 160, h: 160, bg: 'rgba(64,216,112,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 29,
+          status: 'Quote Sent',
+          mode: 'On Demand',
+          name: 'Alternate Destination Options',
+          headline: 'Explore better-fit destinations',
+          supporting: 'We can suggest options that match your budget and dates.',
+          cta: 'See Alternatives',
+          trigger: 'Agent triggered',
+          img: IMG.city,
+          grad: 'linear-gradient(135deg,rgba(16,8,36,.9) 0%,rgba(8,4,20,.45) 100%)',
+          accent: '#9060f8',
+          ctaBg: 'rgba(144,96,248,.9)',
+          ctaText: '#100418',
+          tag: 'Quote Sent',
+          tagBg: 'rgba(144,96,248,.2)',
+          tagColor: '#9060f8',
+          deco: [{ w: 160, h: 160, bg: 'rgba(144,96,248,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 30,
+          status: 'Quote Sent',
+          mode: 'On Demand',
+          name: 'Social Proof / Happy Travellers',
+          headline: 'Trusted by happy travellers',
+          supporting: 'Many travellers plan memorable holidays with our advisors.',
+          cta: 'Continue Planning',
+          trigger: 'Agent triggered',
+          img: IMG.trust,
+          grad: 'linear-gradient(135deg,rgba(12,26,18,.9) 0%,rgba(6,16,10,.45) 100%)',
+          accent: '#60d898',
+          ctaBg: 'rgba(96,216,152,.9)',
+          ctaText: '#061408',
+          tag: 'Quote Sent',
+          tagBg: 'rgba(96,216,152,.2)',
+          tagColor: '#60d898',
+          deco: [{ w: 160, h: 160, bg: 'rgba(96,216,152,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 31,
+          status: 'Quote Sent',
+          mode: 'On Demand',
+          name: 'Urgency / Fare May Change',
+          headline: 'Fares may change soon',
+          supporting: 'Review your quote before availability or pricing changes.',
+          cta: 'Review Soon',
+          trigger: 'Agent triggered',
+          img: IMG.wander,
+          grad: 'linear-gradient(135deg,rgba(30,8,8,.9) 0%,rgba(18,4,4,.45) 100%)',
+          accent: '#f06060',
+          ctaBg: 'rgba(240,96,96,.9)',
+          ctaText: '#180404',
+          tag: 'Quote Sent',
+          tagBg: 'rgba(240,96,96,.2)',
+          tagColor: '#f06060',
+          deco: [{ w: 160, h: 160, bg: 'rgba(240,96,96,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 32,
+          status: 'Call Scheduled',
+          mode: 'Scheduled',
+          name: 'Upcoming Call Reminder',
+          headline: 'Your travel call is scheduled',
+          supporting: 'Our advisor will connect with you as planned.',
+          cta: 'Confirm Availability',
+          trigger: 'After 1h idle',
+          img: IMG.advisor,
+          grad: 'linear-gradient(135deg,rgba(6,14,30,.9) 0%,rgba(3,8,18,.45) 100%)',
+          accent: '#5898f8',
+          ctaBg: 'rgba(88,152,248,.9)',
+          ctaText: '#060c18',
+          tag: 'Call Scheduled',
+          tagBg: 'rgba(88,152,248,.2)',
+          tagColor: '#5898f8',
+          deco: [{ w: 170, h: 170, bg: 'rgba(88,152,248,.1)', bot: -45, right: -45 }],
+        },
+        {
+          id: 33,
+          status: 'Call Scheduled',
+          mode: 'Scheduled',
+          name: 'Missed Scheduled Call Reminder',
+          headline: 'We missed connecting',
+          supporting: 'Share another time for your travel discussion.',
+          cta: 'Reschedule Call',
+          trigger: 'After 1 call ghost',
+          img: IMG.phone,
+          grad: 'linear-gradient(135deg,rgba(26,14,6,.9) 0%,rgba(14,8,3,.45) 100%)',
+          accent: '#e0a050',
+          ctaBg: 'rgba(224,160,80,.9)',
+          ctaText: '#140804',
+          tag: 'Call Scheduled',
+          tagBg: 'rgba(224,160,80,.2)',
+          tagColor: '#e0a050',
+          deco: [{ w: 160, h: 160, bg: 'rgba(224,160,80,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 34,
+          status: 'Call Scheduled',
+          mode: 'On Demand',
+          name: 'Reschedule Call Easily',
+          headline: 'Pick a better time',
+          supporting: 'We can reconnect whenever it is convenient for you.',
+          cta: 'Share Time',
+          trigger: 'Agent triggered',
+          img: IMG.calendar,
+          grad: 'linear-gradient(135deg,rgba(12,20,10,.9) 0%,rgba(6,12,5,.45) 100%)',
+          accent: '#78d848',
+          ctaBg: 'rgba(120,216,72,.9)',
+          ctaText: '#081006',
+          tag: 'Call Scheduled',
+          tagBg: 'rgba(120,216,72,.2)',
+          tagColor: '#78d848',
+          deco: [{ w: 160, h: 160, bg: 'rgba(120,216,72,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 35,
+          status: 'Call Rescheduled',
+          mode: 'Scheduled',
+          name: 'Rescheduled Call Reminder',
+          headline: 'Your call is rescheduled',
+          supporting: 'Please be available for your travel discussion.',
+          cta: 'Confirm Call',
+          trigger: 'After 1h idle',
+          img: IMG.calendar,
+          grad: 'linear-gradient(135deg,rgba(8,14,30,.9) 0%,rgba(4,8,18,.45) 100%)',
+          accent: '#60a0f8',
+          ctaBg: 'rgba(96,160,248,.9)',
+          ctaText: '#060a18',
+          tag: 'Call Rescheduled',
+          tagBg: 'rgba(96,160,248,.2)',
+          tagColor: '#60a0f8',
+          deco: [{ w: 160, h: 160, bg: 'rgba(96,160,248,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 36,
+          status: 'Call Rescheduled',
+          mode: 'Scheduled',
+          name: 'Could Not Reach Again',
+          headline: "Couldn't reach you again",
+          supporting: "Share a better callback time and we'll reconnect.",
+          cta: 'Send Better Time',
+          trigger: 'After 1 call ghost',
+          img: IMG.phone,
+          grad: 'linear-gradient(135deg,rgba(24,14,6,.9) 0%,rgba(14,8,3,.45) 100%)',
+          accent: '#d89850',
+          ctaBg: 'rgba(216,152,80,.9)',
+          ctaText: '#140804',
+          tag: 'Call Rescheduled',
+          tagBg: 'rgba(216,152,80,.2)',
+          tagColor: '#d89850',
+          deco: [{ w: 160, h: 160, bg: 'rgba(216,152,80,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 37,
+          status: 'Call Rescheduled',
+          mode: 'On Demand',
+          name: 'Flexible Callback Option',
+          headline: "We'll call at your convenience",
+          supporting: 'Choose a time that works best for you.',
+          cta: 'Pick Time',
+          trigger: 'Agent triggered',
+          img: IMG.wander,
+          grad: 'linear-gradient(135deg,rgba(6,20,26,.9) 0%,rgba(3,12,16,.45) 100%)',
+          accent: '#40b8d8',
+          ctaBg: 'rgba(64,184,216,.9)',
+          ctaText: '#061218',
+          tag: 'Call Rescheduled',
+          tagBg: 'rgba(64,184,216,.2)',
+          tagColor: '#40b8d8',
+          deco: [{ w: 160, h: 160, bg: 'rgba(64,184,216,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 38,
+          status: 'Link Shared',
+          mode: 'Scheduled',
+          name: 'Link Shared Reminder',
+          headline: 'Your link is ready',
+          supporting: 'Open the shared link to review the next step.',
+          cta: 'Open Link',
+          trigger: 'After 4h idle',
+          img: IMG.phone,
+          grad: 'linear-gradient(135deg,rgba(16,8,32,.9) 0%,rgba(8,4,18,.45) 100%)',
+          accent: '#a878ff',
+          ctaBg: 'rgba(168,120,255,.9)',
+          ctaText: '#0e061e',
+          tag: 'Link Shared',
+          tagBg: 'rgba(168,120,255,.2)',
+          tagColor: '#a878ff',
+          deco: [{ w: 160, h: 160, bg: 'rgba(168,120,255,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 39,
+          status: 'Link Shared',
+          mode: 'Scheduled',
+          name: 'Need Help With Shared Link',
+          headline: 'Need help with the link?',
+          supporting: 'We can explain or help you complete the next step.',
+          cta: 'Ask for Help',
+          trigger: 'After 24h age',
+          img: IMG.advisor,
+          grad: 'linear-gradient(135deg,rgba(6,20,14,.9) 0%,rgba(3,12,8,.45) 100%)',
+          accent: '#50c878',
+          ctaBg: 'rgba(80,200,120,.9)',
+          ctaText: '#060e06',
+          tag: 'Link Shared',
+          tagBg: 'rgba(80,200,120,.2)',
+          tagColor: '#50c878',
+          deco: [{ w: 160, h: 160, bg: 'rgba(80,200,120,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 40,
+          status: 'Link Shared',
+          mode: 'On Demand',
+          name: 'Link Assistance',
+          headline: 'Need link assistance?',
+          supporting: "We're here if you need help reviewing the link.",
+          cta: 'Get Help',
+          trigger: 'Agent triggered',
+          img: IMG.phone,
+          grad: 'linear-gradient(135deg,rgba(14,14,26,.9) 0%,rgba(8,8,16,.45) 100%)',
+          accent: '#8888e8',
+          ctaBg: 'rgba(136,136,232,.9)',
+          ctaText: '#080810',
+          tag: 'Link Shared',
+          tagBg: 'rgba(136,136,232,.2)',
+          tagColor: '#8888e8',
+          deco: [{ w: 160, h: 160, bg: 'rgba(136,136,232,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 41,
+          status: 'Retry Call',
+          mode: 'Scheduled',
+          name: 'Retry Call Reminder',
+          headline: 'We tried calling again',
+          supporting: 'Share a convenient time to discuss your trip.',
+          cta: 'Send Time',
+          trigger: 'After 1 call ghost',
+          img: IMG.phone,
+          grad: 'linear-gradient(135deg,rgba(14,16,24,.9) 0%,rgba(8,8,14,.45) 100%)',
+          accent: '#7898e8',
+          ctaBg: 'rgba(120,152,232,.9)',
+          ctaText: '#080c14',
+          tag: 'Retry Call',
+          tagBg: 'rgba(120,152,232,.2)',
+          tagColor: '#7898e8',
+          deco: [{ w: 160, h: 160, bg: 'rgba(120,152,232,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 42,
+          status: 'Retry Call',
+          mode: 'Scheduled',
+          name: 'Unable To Reach You Reminder',
+          headline: "We couldn't reach you",
+          supporting: "Reply with a better time and we'll call back.",
+          cta: 'Reply With Time',
+          trigger: 'After 2 call ghosts',
+          img: IMG.phone,
+          grad: 'linear-gradient(135deg,rgba(24,6,6,.9) 0%,rgba(14,3,3,.45) 100%)',
+          accent: '#e87070',
+          ctaBg: 'rgba(232,112,112,.9)',
+          ctaText: '#140404',
+          tag: 'Retry Call',
+          tagBg: 'rgba(232,112,112,.2)',
+          tagColor: '#e87070',
+          deco: [{ w: 160, h: 160, bg: 'rgba(232,112,112,.1)', bot: -40, right: -40 }],
+        },
+        {
+          id: 43,
+          status: 'Retry Call',
+          mode: 'On Demand',
+          name: 'Continue On WhatsApp',
+          headline: 'Continue on WhatsApp',
+          supporting: 'We can help plan your trip right here.',
+          cta: 'Reply Here',
+          trigger: 'Agent triggered',
+          img: IMG.wa,
+          grad: 'linear-gradient(135deg,rgba(3,22,10,.92) 0%,rgba(2,12,6,.5) 100%)',
+          accent: '#25d366',
+          ctaBg: 'rgba(37,211,102,.9)',
+          ctaText: '#021008',
+          tag: 'Retry Call',
+          tagBg: 'rgba(37,211,102,.2)',
+          tagColor: '#25d366',
+          deco: [{ w: 160, h: 160, bg: 'rgba(37,211,102,.12)', bot: -40, right: -40 }],
+        },
+        {
+          id: 44,
+          status: 'Retry Call',
+          mode: 'On Demand',
+          name: 'Continue On WhatsApp (Alt)',
+          headline: "We're here on WhatsApp",
+          supporting: 'Planning your trip is easy — just reply here.',
+          cta: 'Start Here',
+          trigger: 'Agent triggered',
+          img: IMG.beach,
+          grad: 'linear-gradient(135deg,rgba(2,14,8,.92) 0%,rgba(1,8,4,.5) 100%)',
+          accent: '#1db954',
+          ctaBg: 'rgba(29,185,84,.9)',
+          ctaText: '#010804',
+          tag: 'Retry Call',
+          tagBg: 'rgba(29,185,84,.2)',
+          tagColor: '#1db954',
+          deco: [{ w: 160, h: 160, bg: 'rgba(29,185,84,.12)', bot: -40, right: -40 }],
+        },
+      ];
+
+      /* ═══ PIPELINE STATUS METADATA MAP FOR WhatsApp GUIDELINES ═══ */
+      const STAGE_SPECS = {
+        'Lead Created': {
+          objective:
+            'Welcome the client and acknowledge receipt of enquiry. Establish immediate, reassuring brand presence.',
+          situation:
+            'Client has just submitted a holiday request, likely on multiple sites, and is waiting for response.',
+          tone: 'Warm, professional, welcoming, low friction',
+          visual:
+            'Relaxing/inspiring landscapes, family/couple holidays, travel maps. Calm soft colors.',
+          notes:
+            'Keep details minimal. Focus on acknowledgment. Avoid asking for payment or complex decisions.',
+        },
+        'Call Instant Form': {
+          objective:
+            'Drive immediate double-opt-in or quick callback conversation while lead is actively online.',
+          situation:
+            'User recently completed a form, expecting high-responsiveness. Mindset is active/focused.',
+          tone: 'Urgent, responsive, action-oriented, helpful',
+          visual:
+            'Friendly real-human travel advisors, phone icons, connection signals, dynamic checklists.',
+          notes:
+            'Action button must be high-contrast and clear. Focus heavily on immediate assistance.',
+        },
+        'Initiated (Probe)': {
+          objective:
+            'Prompt the client to start sharing travel dates, passengers, or basic destination ideas.',
+          situation:
+            'Enquiry is acknowledged but details are missing. User is exploring options in a relaxed mindset.',
+          tone: 'Reassuring, helpful, investigative, friendly',
+          visual:
+            'Interactive map plotting, suitcases, inspiring vacation destinations, notebooks.',
+          notes: "Make call to action low-friction (e.g. 'Share Details' or 'Talk to Advisor').",
+        },
+        'In Progress (Probe)': {
+          objective:
+            'Deepen engagement and gather specific choices while custom plans are being actively designed.',
+          situation:
+            'Planning is underway, but advisor needs clarification on travel styles, pax, or exact style options.',
+          tone: 'Personalized, active, exciting, structured',
+          visual: 'Scenic destination presets, luxury hotel lobbies, exploration previews.',
+          notes:
+            'Show style choices visually in the background. Keep copy highly punchy and organized.',
+        },
+        'Link Clicked (Probe)': {
+          objective:
+            "Re-engage user after they've browsed itineraries/choices. Offer direct customization.",
+          situation:
+            "User has clicked an itinerary link, showing positive intent, but hasn't confirmed yet.",
+          tone: 'Encouraging, supportive, cooperative',
+          visual: 'Family vacation memories, city tours, advisor support check-in.',
+          notes: 'Reaffirm that tailoring details is extremely simple and fast.',
+        },
+        'Completed (Probe)': {
+          objective:
+            'Secure final verification of details before starting formal quote computation.',
+          situation:
+            "Requirements are gathered. Client wants accuracy. Need a quick 'Yes/No' check on preference list.",
+          tone: 'Precise, clear, reassuring, professional',
+          visual: 'Organized itinerary checklists, travel planning boards, calendars.',
+          notes: "Make button text explicit: 'Confirm / Correct' to build structural trust.",
+        },
+        'Call eQuoted': {
+          objective:
+            'Drive immediate link review of newly computed, custom quotation and capture feedback.',
+          situation:
+            'Quotation is delivered. User is comparing with competing agents, looking at price vs value.',
+          tone: 'Value-focused, transparent, supportive, clear',
+          visual:
+            'High-end luxury resort previews, expert advisor calls, transparent pricing layouts.',
+          notes: 'Highlight the overall inclusions and overall support over mere price tags.',
+        },
+        "Call Couldn't Q": {
+          objective:
+            'Explain missing blocks preventing quote computation and gracefully request details.',
+          situation:
+            'Blocked stage due to missing dates or pax. User might be hesitant or distracted.',
+          tone: 'Friendly, non-intrusive, supportive, cooperative',
+          visual: 'Real-person travel planner, advisor help desk, maps.',
+          notes:
+            "Re-emphasize quality assurance: 'We prefer a right plan over a rushed wrong quote'.",
+        },
+        'Quote Sent': {
+          objective:
+            'Accelerate decision-making, tackle price objections, and introduce payment flexibility.',
+          situation:
+            "Quote is in user's hand. User is calculating budgets, looking at booking conditions or comparing.",
+          tone: 'Flexible, value-centered, urgent, reassuring',
+          visual:
+            'EMI cards, payment security chips, social proof happy travellers, calendar deadlines.',
+          notes: 'Offer flexible solutions (like EMI or custom revisions) to handle objections.',
+        },
+        'Call Scheduled': {
+          objective:
+            'Remind client of upcoming voice/video call or make it easy to reschedule if busy.',
+          situation:
+            'A call time is set, but user is busy, easily distracted, or has calendar conflicts.',
+          tone: 'Polite, professional, structured, accommodating',
+          visual: 'Calendar invites, friendly check-in, phone alerts, personal travel advisor.',
+          notes: 'Simple button to verify or reschedule to prevent ghosting.',
+        },
+        'Call Rescheduled': {
+          objective: 'Confirm the new rescheduled call slot and secure high-reliability connect.',
+          situation:
+            'A rescheduled slot is set. Need to maintain polite compliance without pressure.',
+          tone: 'Polite, structured, accommodating, friendly',
+          visual: 'Calendar blocks, wander lists, friendly check-in.',
+          notes: 'Emphasize convenience for the traveller.',
+        },
+        'Link Shared': {
+          objective: 'Draw immediate attention to a shared itinerary or proposal link.',
+          situation:
+            "User has received an itinerary link but hasn't opened it yet or needs assistance.",
+          tone: 'Helpful, encouraging',
+          visual: 'Digital phone mockups, travel links, advisor check-in.',
+          notes: "Keep CTA simple: 'Open Link' or 'Get Help'.",
+        },
+        'Retry Call': {
+          objective:
+            'Re-engage client after multiple missed call attempts by moving communication to WhatsApp.',
+          situation: 'Client is busy, ignoring calls, or prefers async chat on WhatsApp.',
+          tone: 'Polite, helpful, low pressure',
+          visual: 'WhatsApp chat bubbles, relaxing beach escapes.',
+          notes: "Keep CTA extremely low barrier: 'Reply Here' or 'Start Here'.",
+        },
+      };
+
+      const STATUSES = [...new Set(B.map((b) => b.status))];
+
+      // Parse CRM Query Params
+      const urlParams = new URLSearchParams(window.location.search);
+      const leadName = urlParams.get('name') || '';
+      const leadPhone = urlParams.get('phone') || '';
+      const leadDest = urlParams.get('dest') || '';
+      const initialStatus = urlParams.get('status');
+
+      let active = initialStatus && STATUSES.includes(initialStatus) ? initialStatus : 'All';
+      let editingBannerId = null;
+      let currentPresetGradient = 'emerald';
+
+      // Predefined gradient definitions
+      const GRADIENTS = {
+        emerald: 'linear-gradient(135deg, rgba(10, 40, 30, 0.9) 0%, rgba(5, 20, 15, 0.45) 100%)',
+        indigo: 'linear-gradient(135deg, rgba(10, 25, 60, 0.9) 0%, rgba(5, 12, 35, 0.45) 100%)',
+        violet: 'linear-gradient(135deg, rgba(40, 10, 70, 0.9) 0%, rgba(20, 5, 40, 0.45) 100%)',
+        amber: 'linear-gradient(135deg, rgba(35, 22, 5, 0.9) 0%, rgba(20, 10, 3, 0.45) 100%)',
+        dusk: 'linear-gradient(135deg, rgba(28, 12, 26, 0.9) 0%, rgba(14, 6, 12, 0.45) 100%)',
+        crimson: 'linear-gradient(135deg, rgba(35, 8, 8, 0.9) 0%, rgba(18, 4, 4, 0.45) 100%)',
+        teal: 'linear-gradient(135deg, rgba(5, 35, 40, 0.9) 0%, rgba(3, 18, 20, 0.45) 100%)',
+        sunset: 'linear-gradient(135deg, rgba(40, 15, 10, 0.9) 0%, rgba(20, 8, 5, 0.45) 100%)',
+        forest: 'linear-gradient(135deg, rgba(15, 35, 10, 0.9) 0%, rgba(8, 18, 5, 0.45) 100%)',
+        midnight: 'linear-gradient(135deg, rgba(5, 10, 35, 0.95) 0%, rgba(2, 5, 18, 0.5) 100%)',
+        plum: 'linear-gradient(135deg, rgba(30, 8, 30, 0.9) 0%, rgba(15, 4, 15, 0.45) 100%)',
+      };
+
+      /**
+       * Toggle the General Guidelines header panel
+       */
+      function toggleGuideAccordion() {
+        const acc = document.getElementById('guideAccordion');
+        acc.classList.toggle('closed');
+      }
+
+      /**
+       * Toggle the inline spec drawer for a specific banner
+       */
+      function toggleSpecs(id) {
+        const specEl = document.getElementById(`specs-${id}`);
+        specEl.classList.toggle('visible');
+      }
+
+      /**
+       * Renders the HTML structure for a single banner card wrapper
+       */
+      function renderBanner(b) {
+        const decos = b.deco
+          .map((d) => {
+            let style = `position:absolute;border-radius:50%;width:${d.w}px;height:${d.h}px;background:${d.bg};pointer-events:none;z-index:1;`;
+            if (d.bot !== undefined) style += `bottom:${d.bot}px;`;
+            if (d.right !== undefined) style += `right:${d.right}px;`;
+            if (d.top !== undefined) style += `top:${d.top}px;`;
+            if (d.left !== undefined) style += `left:${d.left}px;`;
+            return `<div style="${style}"></div>`;
+          })
+          .join('');
+
+        // Fetch specific stage specs
+        const spec = STAGE_SPECS[b.status] || STAGE_SPECS['Lead Created'];
+
+        return `
+  <div class="card-wrapper" id="wrapper-${b.id}">
+    <!-- Visual Banner Box -->
+    <div class="banner" id="banner-${b.id}" data-banner-id="${b.id}">
+      <div class="bg-img" id="bg-img-${b.id}" style="background-image:url('${b.img}')"></div>
+      <div class="overlay" id="overlay-${b.id}" style="background:${b.grad}"></div>
+      ${decos}
+      <div class="content">
+        <div class="top-row">
+          <div class="logo-wrap"><img src="${LOGO}" alt="MooN" onerror="this.style.display='none';this.parentNode.innerHTML='<span style=&quot;font-family:Sora,sans-serif;font-weight:800;font-size:18px;color:#fff;letter-spacing:-0.5px&quot;>MooN</span>'"></div>
+          <span class="mode-badge" id="mode-badge-${b.id}">${b.mode === 'On Demand' ? '⚡ On Demand' : '🕐 Scheduled'}</span>
+        </div>
+        <div class="spacer"></div>
+        <div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${b.accent};margin-bottom:5px;opacity:.9" id="meta-tag-${b.id}">${b.tag} · Banner ${b.id}</div>
+          <div class="headline" id="headline-${b.id}">${b.headline}</div>
+          <div class="supporting" id="supporting-${b.id}" style="color:rgba(255,255,255,.82)">${b.supporting}</div>
+          <div class="bottom-row">
+            <span class="cta" id="cta-${b.id}" style="background:${b.ctaBg};color:${b.ctaText}">${b.cta}</span>
+            <span class="trigger" id="trigger-${b.id}" style="color:rgba(255,255,255,.5)">${b.trigger}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Control Panel -->
+    <div class="banner-actions">
+      <button class="btn-download" onclick="downloadBanner(${b.id})">📋 Copy & Send</button>
+      <button onclick="openEditor(${b.id})">✏️ Edit</button>
+      <button onclick="toggleSpecs(${b.id})">📋 Design Specs</button>
+    </div>
+
+    <!-- Collapsible Dynamic Specs Drawer -->
+    <div class="inline-specs" id="specs-${b.id}">
+      <div class="spec-row">
+        <div class="spec-label">Stage Specs</div>
+        <div class="spec-value"><strong>${b.status}</strong> (${b.mode})</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-label">Banner Objective</div>
+        <div class="spec-value">${spec.objective}</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-label">Customer Mindset</div>
+        <div class="spec-value">${spec.situation}</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-label">Visual Direction</div>
+        <div class="spec-value">${spec.visual}</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-label">Suggested Tone</div>
+        <div class="spec-value" style="color: var(--warning); font-weight:600;">${spec.tone}</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-label">Design Notes</div>
+        <div class="spec-value" style="color:#ef4444;">${spec.notes}</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-label">WhatsApp Rule</div>
+        <div class="spec-value">Prefer 1080x1080 square or 1080x1920 story. Keep text minimal and highly readable on mobile.</div>
+      </div>
+    </div>
+  </div>`;
+      }
+
+      /**
+       * Filter and render grid items
+       */
+      function render() {
+        const list = active === 'All' ? B : B.filter((b) => b.status === active);
+        document.getElementById('cnt').textContent = `Showing ${list.length} of 44 banners`;
+        document.getElementById('grid').innerHTML = list.map(renderBanner).join('');
+      }
+
+      /**
+       * Generate filtering buttons
+       */
+      function renderFilters() {
+        const fb = document.getElementById('fb');
+        const mk = (label, val) => {
+          const btn = document.createElement('button');
+          btn.className = 'fbtn' + (val === 'All' ? ' on' : '');
+          const cnt = val === 'All' ? 44 : B.filter((b) => b.status === val).length;
+          btn.textContent = `${label} (${cnt})`;
+          btn.onclick = () => {
+            active = val;
+            document.querySelectorAll('.fbtn').forEach((b) => b.classList.remove('on'));
+            btn.classList.add('on');
+            render();
+          };
+          fb.appendChild(btn);
+        };
+        mk('All', 'All');
+        STATUSES.forEach((s) => mk(s, s));
+      }
+
+      /**
+       * ═══ LIVE EDITOR ACTIONS & WORKFLOW ═══ */
+
+      function openEditor(id) {
+        editingBannerId = id;
+        const banner = B.find((b) => b.id === id);
+        if (!banner) return;
+
+        document.getElementById('editorBannerTitle').textContent =
+          `Edit Banner ${id} - ${banner.name}`;
+
+        // Set Inputs
+        document.getElementById('editHeadline').value = banner.headline;
+        document.getElementById('editSupporting').value = banner.supporting;
+        document.getElementById('editCTA').value = banner.cta;
+
+        // Detect image and populate select dropdown or custom input
+        const presetKey = Object.keys(IMG).find((key) => IMG[key] === banner.img);
+        if (presetKey) {
+          document.getElementById('editBgSelect').value = presetKey;
+          document.getElementById('editBgUrl').value = '';
+        } else {
+          document.getElementById('editBgSelect').value = 'custom';
+          document.getElementById('editBgUrl').value = banner.img;
+        }
+
+        // Pre-select Emerald or appropriate gradient overlay
+        currentPresetGradient = 'emerald';
+        Object.keys(GRADIENTS).forEach((key) => {
+          if (banner.grad.includes(key) || banner.grad === GRADIENTS[key]) {
+            currentPresetGradient = key;
+          }
+        });
+        updatePresetGradientUI();
+
+        // Set default text customization styles
+        document.getElementById('editFontFamily').value = "'Sora', sans-serif";
+        document.getElementById('editTextColor').value = '#ffffff';
+        document.getElementById('editTextColorPicker').value = '#ffffff';
+        document.getElementById('editTextColorPicker').style.display = 'none';
+        document.getElementById('editAccentColor').value = 'default';
+        document.getElementById('editAccentColorPicker').value = banner.accent || '#8b5cf6';
+        document.getElementById('editAccentColorPicker').style.display = 'none';
+        document.getElementById('editFontSize').value = 'default';
+        document.getElementById('editTextAlign').value = 'left';
+        document.getElementById('editTextValign').value = 'flex-end';
+
+        // Hide checkboxes (Hide Mode Badge and Trigger by default on download)
+        document.getElementById('hideLogo').checked = false;
+        document.getElementById('hideMode').checked = true;
+        document.getElementById('hideMeta').checked = false;
+        document.getElementById('hideCTA').checked = false;
+        document.getElementById('hideTrigger').checked = true;
+        document.getElementById('hideDeco').checked = false;
+
+        // Load preview aspect ratio
+        setEditorRatio('landscape');
+
+        // Load modal preview card
+        updateLivePreview();
+
+        // Show modal
+        document.getElementById('editorModal').classList.add('visible');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeEditor() {
+        document.getElementById('editorModal').classList.remove('visible');
+        editingBannerId = null;
+        document.body.style.overflow = '';
+      }
+
+      /**
+       * Ratio Switcher
+       */
+      function setEditorRatio(ratio) {
+        const box = document.getElementById('editorPreviewBox');
+        box.className = 'preview-container';
+        box.classList.add(`ratio-${ratio}`);
+
+        // Update button highlights
+        document.querySelectorAll('.ratio-btn').forEach((btn) => btn.classList.remove('active'));
+        if (ratio === 'landscape')
+          document.getElementById('btnRatioLandscape').classList.add('active');
+        if (ratio === 'square') document.getElementById('btnRatioSquare').classList.add('active');
+        if (ratio === 'story') document.getElementById('btnRatioStory').classList.add('active');
+      }
+
+      /**
+       * Background presets changed
+       */
+      function onBgSelectChanged() {
+        const select = document.getElementById('editBgSelect');
+        const urlInput = document.getElementById('editBgUrl');
+
+        if (select.value === 'custom') {
+          urlInput.focus();
+        } else {
+          urlInput.value = '';
+          updateLivePreview();
+        }
+      }
+
+      function onCustomBgUrlChanged() {
+        document.getElementById('editBgSelect').value = 'custom';
+        updateLivePreview();
+      }
+
+      function onBgFileSelected() {
+        const fileInput = document.getElementById('editBgFile');
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          document.getElementById('editBgSelect').value = 'custom';
+          document.getElementById('editBgUrl').value = e.target.result;
+          updateLivePreview();
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function onTextColorSelectChanged() {
+        const select = document.getElementById('editTextColor');
+        const picker = document.getElementById('editTextColorPicker');
+        if (select.value === 'custom') {
+          picker.style.display = 'inline-block';
+        } else {
+          picker.style.display = 'none';
+          picker.value = select.value;
+        }
+        updateLivePreview();
+      }
+
+      function onTextColorPickerChanged() {
+        updateLivePreview();
+      }
+
+      function onAccentColorSelectChanged() {
+        const select = document.getElementById('editAccentColor');
+        const picker = document.getElementById('editAccentColorPicker');
+        if (select.value === 'custom') {
+          picker.style.display = 'inline-block';
+        } else {
+          picker.style.display = 'none';
+        }
+        updateLivePreview();
+      }
+
+      function onAccentColorPickerChanged() {
+        updateLivePreview();
+      }
+
+      /**
+       * Preset gradient selection
+       */
+      function setPresetGradient(key) {
+        currentPresetGradient = key;
+        updatePresetGradientUI();
+        updateLivePreview();
+      }
+
+      function updatePresetGradientUI() {
+        document.querySelectorAll('.grad-preset-btn').forEach((btn) => {
+          btn.classList.remove('active');
+        });
+        const activeBtn = document.getElementById(`gp-${currentPresetGradient}`);
+        if (activeBtn) activeBtn.classList.add('active');
+      }
+
+      /**
+       * Calculate word counts and validate WhatsApp constraints
+       */
+      function checkConstraints(headline, supporting, cta) {
+        const countWords = (text) => (text.trim() === '' ? 0 : text.trim().split(/\s+/).length);
+
+        const headCount = countWords(headline);
+        const supportCount = countWords(supporting);
+        const ctaCount = countWords(cta);
+
+        // Update counter badges
+        updateBadge('headCounter', headCount, 4, 7);
+        updateBadge('supportCounter', supportCount, 8, 14);
+        updateBadge('ctaCounter', ctaCount, 2, 4);
+
+        // General Warning Box
+        const warnBox = document.getElementById('editorWarningBox');
+        const errors = [];
+
+        if (headCount < 4 || headCount > 7) {
+          errors.push(
+            `Headline has ${headCount} words (Target: 4-7 words for optimal WhatsApp readability).`,
+          );
+        }
+        if (supportCount < 8 || supportCount > 14) {
+          errors.push(`Supporting text has ${supportCount} words (Target: 8-14 words).`);
+        }
+        if (ctaCount < 2 || ctaCount > 4) {
+          errors.push(`CTA Button text has ${ctaCount} words (Target: 2-4 words).`);
+        }
+
+        if (errors.length > 0) {
+          warnBox.innerHTML = `⚠️ <strong>WhatsApp Copy Guidelines Warning:</strong><br>${errors.join('<br>')}`;
+          warnBox.classList.add('visible');
+        } else {
+          warnBox.classList.remove('visible');
+        }
+      }
+
+      function updateBadge(id, count, min, max) {
+        const badge = document.getElementById(id);
+        badge.textContent = `${count} word${count === 1 ? '' : 's'}`;
+
+        badge.className = 'counter-tag';
+        if (count >= min && count <= max) {
+          badge.classList.add('ok');
+          badge.textContent += ' (Optimal)';
+        } else if (count > 0 && (count === min - 1 || count === max + 1)) {
+          badge.classList.add('warn');
+          badge.textContent += ' (Acceptable)';
+        } else {
+          badge.classList.add('bad');
+          badge.textContent += ` (Goal: ${min}-${max})`;
+        }
+      }
+
+      /**
+       * Re-render live preview box inside Editor
+       */
+      function updateLivePreview() {
+        if (!editingBannerId) return;
+        const original = B.find((b) => b.id === editingBannerId);
+        if (!original) return;
+
+        const headline = document.getElementById('editHeadline').value;
+        const supporting = document.getElementById('editSupporting').value;
+        const cta = document.getElementById('editCTA').value;
+
+        // Background Image
+        const selectVal = document.getElementById('editBgSelect').value;
+        const customVal = document.getElementById('editBgUrl').value;
+        const finalImg = selectVal === 'custom' ? customVal : IMG[selectVal];
+
+        // Gradient
+        const finalGrad = GRADIENTS[currentPresetGradient];
+
+        // Typography & Custom Colors
+        const font = document.getElementById('editFontFamily').value;
+        const textColorSelect = document.getElementById('editTextColor').value;
+        const textColor =
+          textColorSelect === 'custom'
+            ? document.getElementById('editTextColorPicker').value
+            : textColorSelect;
+
+        const accentSelect = document.getElementById('editAccentColor').value;
+        const accentColor =
+          accentSelect === 'custom'
+            ? document.getElementById('editAccentColorPicker').value
+            : accentSelect === 'default'
+              ? original.accent
+              : accentSelect;
+
+        // Button background / Text color based on accent
+        let ctaBg = original.ctaBg;
+        let ctaText = original.ctaText;
+        if (accentSelect !== 'default') {
+          ctaBg = accentColor;
+          ctaText = '#0f0f16';
+        }
+
+        // Font size overrides
+        const fontSize = document.getElementById('editFontSize').value;
+        let headlineSizeStyle = '';
+        let supportingSizeStyle = '';
+        if (fontSize === 'small') {
+          headlineSizeStyle = 'font-size: 14px !important;';
+          supportingSizeStyle = 'font-size: 9px !important;';
+        } else if (fontSize === 'medium') {
+          headlineSizeStyle = 'font-size: 20px !important;';
+          supportingSizeStyle = 'font-size: 12px !important;';
+        } else if (fontSize === 'large') {
+          headlineSizeStyle = 'font-size: 26px !important;';
+          supportingSizeStyle = 'font-size: 14px !important;';
+        }
+
+        // Layout alignments & Vertical position
+        const textAlign = document.getElementById('editTextAlign').value;
+        const valign = document.getElementById('editTextValign').value;
+        const flexAlign =
+          textAlign === 'left' ? 'flex-start' : textAlign === 'right' ? 'flex-end' : 'center';
+
+        // Decide spacer display
+        const spacerDisplay = valign === 'flex-end' ? 'display:block; flex:1;' : 'display:none;';
+        const textBlockMargin = valign === 'flex-start' ? 'margin-top: 36px;' : '';
+
+        // Get checkbox visibility states
+        const hideLogo = document.getElementById('hideLogo').checked;
+        const hideMode = document.getElementById('hideMode').checked;
+        const hideMeta = document.getElementById('hideMeta').checked;
+        const hideCTA = document.getElementById('hideCTA').checked;
+        const hideTrigger = document.getElementById('hideTrigger').checked;
+        const hideDeco = document.getElementById('hideDeco').checked;
+
+        const logoStyle = hideLogo ? 'display:none;' : '';
+        const modeStyle = hideMode ? 'display:none;' : '';
+        const metaStyle = hideMeta ? 'display:none;' : '';
+        const ctaStyle = hideCTA ? 'display:none;' : '';
+        const triggerStyle = hideTrigger ? 'display:none;' : '';
+
+        // Render mock card decors
+        let decos = '';
+        if (!hideDeco) {
+          decos = original.deco
+            .map((d) => {
+              let style = `position:absolute;border-radius:50%;width:${d.w}px;height:${d.h}px;background:${d.bg};pointer-events:none;z-index:1;`;
+              if (d.bot !== undefined) style += `bottom:${d.bot}px;`;
+              if (d.right !== undefined) style += `right:${d.right}px;`;
+              if (d.top !== undefined) style += `top:${d.top}px;`;
+              if (d.left !== undefined) style += `left:${d.left}px;`;
+              return `<div style="${style}"></div>`;
+            })
+            .join('');
+        }
+
+        const container = document.getElementById('editorPreviewBox');
+        container.innerHTML = `
+    <div class="banner" id="editorLiveBannerCard" style="font-family:${font};">
+      <div class="bg-img" style="background-image:url('${finalImg}'); border-radius: inherit;"></div>
+      <div class="overlay" style="background:${finalGrad}; border-radius: inherit;"></div>
+      ${decos}
+      <div class="content" style="display:flex; flex-direction:column; justify-content:${valign}; align-items:${flexAlign}; text-align:${textAlign};">
+        <div class="top-row" style="position:absolute; top:14px; left:16px; right:16px; display:flex; justify-content:space-between; align-items:flex-start; z-index:3;">
+          <div class="logo-wrap" style="${logoStyle}"><img src="${LOGO}" alt="MooN" onerror="this.style.display='none';this.parentNode.innerHTML='<span style=&quot;font-family:Sora,sans-serif;font-weight:800;font-size:18px;color:#fff;letter-spacing:-0.5px&quot;>MooN</span>'"></div>
+          <span class="mode-badge" style="${modeStyle}">${original.mode === 'On Demand' ? '⚡ On Demand' : '🕐 Scheduled'}</span>
+        </div>
+        <div class="spacer" style="${spacerDisplay}"></div>
+        <div style="width: 100%; display: flex; flex-direction: column; align-items:${flexAlign}; ${textBlockMargin} z-index: 2;">
+          <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${accentColor};margin-bottom:5px;opacity:.9; ${metaStyle}" id="meta-tag-preview">${original.tag} · Preview Mode</div>
+          <div class="headline" style="color:${textColor}; ${headlineSizeStyle}">${headline}</div>
+          <div class="supporting" style="color:${textColor}; opacity: 0.88; max-width:85%; ${supportingSizeStyle}">${supporting}</div>
+          <div class="bottom-row" style="display:flex; align-items:center; justify-content:space-between; width:100%; margin-top: 4px;">
+            <span class="cta" style="background:${ctaBg}; color:${ctaText}; ${ctaStyle}">${cta}</span>
+            <span class="trigger" style="color:${textColor}; opacity:0.55; ${triggerStyle}">${original.trigger}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+        // Check guidelines in real-time
+        checkConstraints(headline, supporting, cta);
+      }
+
+      /**
+       * ═══ HIGH-RESOLUTION HTML2CANVAS EXPORTS ═══ */
+
+      /**
+       * Download standard banner directly from grid
+       */
+      function downloadBanner(id) {
+        const original = B.find((b) => b.id === id);
+        const cardWrapper = document.getElementById(`wrapper-${id}`);
+        const bannerEl = document.getElementById(`banner-${id}`);
+        const specsEl = document.getElementById(`specs-${id}`);
+
+        // Temporarily close specs panel to keep render context clean
+        const wasSpecsVisible = specsEl.classList.contains('visible');
+        specsEl.classList.remove('visible');
+
+        // Find and temporarily hide elements not desired in the exported PNG
+        const modeBadge = bannerEl.querySelector('.mode-badge');
+        const triggerText = bannerEl.querySelector('.trigger');
+        if (modeBadge) modeBadge.style.display = 'none';
+        if (triggerText) triggerText.style.display = 'none';
+
+        // Trigger html2canvas
+        html2canvas(bannerEl, {
+          useCORS: true,
+          allowTaint: true,
+          scale: 2, // High resolution (double density)
+          backgroundColor: null, // Transparent rounded corners
+          onclone: (clonedDoc) => {
+            const clonedBody = clonedDoc.body;
+            if (clonedBody) {
+              clonedBody.style.backgroundColor = 'transparent';
+              clonedBody.style.background = 'none';
+            }
+            const clonedWrapper = clonedDoc.getElementById(`wrapper-${id}`);
+            if (clonedWrapper) {
+              clonedWrapper.style.backgroundColor = 'transparent';
+              clonedWrapper.style.background = 'none';
+            }
+            const clonedBanner = clonedDoc.getElementById(`banner-${id}`);
+            if (clonedBanner) {
+              clonedBanner.style.backgroundColor = 'transparent';
+              clonedBanner.style.background = 'none';
+              const bgImg = clonedBanner.querySelector('.bg-img');
+              if (bgImg) bgImg.style.borderRadius = '12px';
+              const overlay = clonedBanner.querySelector('.overlay');
+              if (overlay) overlay.style.borderRadius = '12px';
+            }
+          },
+        })
+          .then((canvas) => {
+            let text = '';
+            if (typeof leadPhone !== 'undefined' && leadPhone) {
+              let greeting = leadName ? `Hi ${leadName},\n\n` : `Hi,\n\n`;
+              text = greeting + original.headline + '.\n' + original.supporting;
+              if (leadDest) text += `\nRegarding: ${leadDest}`;
+            }
+
+            // Try to copy image to clipboard
+            canvas.toBlob((blob) => {
+              try {
+                const item = new ClipboardItem({ 'image/png': blob });
+                navigator.clipboard
+                  .write([item])
+                  .then(() => {
+                    if (leadPhone) {
+                      window.open(
+                        `https://wa.me/${leadPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`,
+                        '_blank',
+                      );
+                    } else {
+                      alert('Banner copied to clipboard! You can now paste it.');
+                    }
+                  })
+                  .catch((err) => {
+                    console.error('Clipboard copy failed:', err);
+                    fallbackDownload(canvas, id, original.name, leadPhone, text);
+                  });
+              } catch (e) {
+                console.error('ClipboardItem not supported:', e);
+                fallbackDownload(canvas, id, original.name, leadPhone, text);
+              }
+            }, 'image/png');
+
+            function fallbackDownload(cnv, bId, bName, lPhone, lText) {
+              const link = document.createElement('a');
+              link.download = `MooN-banner-${bId}-${bName.toLowerCase().replace(/\s+/g, '-')}.png`;
+              link.href = cnv.toDataURL('image/png');
+              link.click();
+              if (lPhone) {
+                navigator.clipboard.writeText(lText).catch(() => {});
+                window.open(
+                  `https://wa.me/${lPhone.replace(/\D/g, '')}?text=${encodeURIComponent(lText)}`,
+                  '_blank',
+                );
+              }
+            }
+
+            // Restore elements
+            if (wasSpecsVisible) specsEl.classList.add('visible');
+            if (modeBadge) modeBadge.style.display = '';
+            if (triggerText) triggerText.style.display = '';
+          })
+          .catch((err) => {
+            console.error('Canvas render failed:', err);
+            alert('Export failed. Please check internet connections for Unsplash presets.');
+            // Restore elements on failure
+            if (wasSpecsVisible) specsEl.classList.add('visible');
+            if (modeBadge) modeBadge.style.display = '';
+            if (triggerText) triggerText.style.display = '';
+          });
+      }
+
+      function downloadEditedBanner() {
+        if (!editingBannerId) return;
+        const original = B.find((b) => b.id === editingBannerId);
+        const bannerEl = document.getElementById('editorLiveBannerCard');
+
+        html2canvas(bannerEl, {
+          useCORS: true,
+          allowTaint: true,
+          scale: 2,
+          backgroundColor: null, // Transparent rounded corners
+          onclone: (clonedDoc) => {
+            const clonedBody = clonedDoc.body;
+            if (clonedBody) {
+              clonedBody.style.backgroundColor = 'transparent';
+              clonedBody.style.background = 'none';
+            }
+            const previewPanel = clonedDoc.querySelector('.modal-preview-panel');
+            if (previewPanel) {
+              previewPanel.style.backgroundColor = 'transparent';
+              previewPanel.style.background = 'none';
+            }
+            const modalOverlay = clonedDoc.querySelector('.modal-overlay');
+            if (modalOverlay) {
+              modalOverlay.style.backgroundColor = 'transparent';
+              modalOverlay.style.background = 'none';
+            }
+            const clonedBanner = clonedDoc.getElementById('editorLiveBannerCard');
+            if (clonedBanner) {
+              clonedBanner.style.backgroundColor = 'transparent';
+              clonedBanner.style.background = 'none';
+              const style = window.getComputedStyle(bannerEl);
+              const radius = style.borderRadius || '16px';
+              const bgImg = clonedBanner.querySelector('.bg-img');
+              if (bgImg) bgImg.style.borderRadius = radius;
+              const overlay = clonedBanner.querySelector('.overlay');
+              if (overlay) overlay.style.borderRadius = radius;
+            }
+          },
+        })
+          .then((canvas) => {
+            const headline = document.getElementById('editHeadline').value;
+            const supporting = document.getElementById('editSupporting').value;
+            let text = '';
+            if (typeof leadPhone !== 'undefined' && leadPhone) {
+              let greeting = leadName ? `Hi ${leadName},\n\n` : `Hi,\n\n`;
+              text = greeting + headline + '.\n' + supporting;
+              if (leadDest) text += `\nRegarding: ${leadDest}`;
+            }
+
+            // Try to copy image to clipboard
+            canvas.toBlob((blob) => {
+              try {
+                const item = new ClipboardItem({ 'image/png': blob });
+                navigator.clipboard
+                  .write([item])
+                  .then(() => {
+                    if (leadPhone) {
+                      window.open(
+                        `https://wa.me/${leadPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`,
+                        '_blank',
+                      );
+                    } else {
+                      alert('Banner copied to clipboard! You can now paste it.');
+                    }
+                  })
+                  .catch((err) => {
+                    fallbackDownloadEdited(canvas, editingBannerId, original.name, leadPhone, text);
+                  });
+              } catch (e) {
+                fallbackDownloadEdited(canvas, editingBannerId, original.name, leadPhone, text);
+              }
+            }, 'image/png');
+
+            function fallbackDownloadEdited(cnv, bId, bName, lPhone, lText) {
+              const link = document.createElement('a');
+              link.download = `MooN-edited-banner-${bId}-${bName.toLowerCase().replace(/\s+/g, '-')}.png`;
+              link.href = cnv.toDataURL('image/png');
+              link.click();
+              if (lPhone) {
+                navigator.clipboard.writeText(lText).catch(() => {});
+                window.open(
+                  `https://wa.me/${lPhone.replace(/\D/g, '')}?text=${encodeURIComponent(lText)}`,
+                  '_blank',
+                );
+              }
+            }
+
+            closeEditor();
+          })
+          .catch((err) => {
+            console.error('Canvas render failed:', err);
+            alert('Export failed. Check internet connections for presets.');
+          });
+      }
+
+      // Initial renders
+      renderFilters();
+      render();
+    </script>
+  </body>
+</html>

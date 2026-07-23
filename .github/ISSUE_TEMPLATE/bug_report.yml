@@ -1,0 +1,69 @@
+name: Bug report
+description: Report a reproducible problem in MooNsConfig
+title: '[Bug]: '
+labels: ['bug', 'needs-triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Use synthetic data and remove all secrets, logs containing
+        personal data, and production screenshots. Report vulnerabilities through the Security tab.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Start the application with ...
+        2. Open ...
+        3. Select ...
+        4. Observe ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Route maps / animation
+        - Packages / itineraries
+        - Vendors / RFQs
+        - Hotels / stays
+        - Cars / transport
+        - CRM / quotes / bookings
+        - Platform / tenancy
+        - API / workers
+        - Setup / documentation
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Revision
+      description: Commit SHA, branch, or release tag
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser, Node version, and Docker/native setup
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Sanitized logs or screenshots made with synthetic data only
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Data-safety confirmation
+      options:
+        - label: I removed credentials, personal data, production logs, and customer information.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true

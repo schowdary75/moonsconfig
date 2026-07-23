@@ -1,0 +1,9 @@
+node_modules
+.output
+.tanstack
+dist
+coverage
+public/admin1
+src/routeTree.gen.ts
+server/prisma/migrations
+package-lock.json

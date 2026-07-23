@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /blocked
+Disallow: /auth/
+Disallow: /private/
+Disallow: /api/honeypot

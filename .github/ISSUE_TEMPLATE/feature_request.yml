@@ -1,0 +1,45 @@
+name: Feature request
+description: Propose a focused improvement to MooNsConfig
+title: '[Feature]: '
+labels: ['enhancement', 'needs-triage']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Which traveller, agent, supplier, or operator problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the workflow and the smallest useful version.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Route maps / animation
+        - Packages / itineraries
+        - Vendors / RFQs
+        - Hotels / stays
+        - Cars / transport
+        - CRM / quotes / bookings
+        - Platform / tenancy
+        - API / workers
+        - Setup / documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: textarea
+    id: security
+    attributes:
+      label: Security and provider considerations
+      description: Note tenant isolation, permissions, external writes, credentials, or providers.

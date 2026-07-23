@@ -1,0 +1,2517 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cinematic Route Animator</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <style>
+      :root {
+        --navy: #0a1128;
+        --navy-2: #0d1633;
+        --panel-bg: rgba(10, 17, 40, 0.72);
+        --panel-border: rgba(201, 162, 39, 0.35);
+        --brass: #c9a227;
+        --brass-bright: #e8c655;
+        --text: #eef1f6;
+        --text-dim: #9aa3b8;
+        --road: #2c3e50;
+        --flight: #2980b9;
+        --cruise: #27ae60;
+        --rail: #c0392b;
+        --font-display: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+        --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--navy);
+        font-family: var(--font-body);
+        color: var(--text);
+      }
+      #map {
+        position: absolute;
+        inset: 0;
+        background: #f8f9fa;
+      }
+      .leaflet-container {
+        background: #f8f9fa;
+        font-family: var(--font-body);
+      }
+
+      .vignette {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 399;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(0, 0, 0, 0) 55%,
+          rgba(4, 7, 20, 0.55) 100%
+        );
+      }
+
+      /* ---------- scrollbars ---------- */
+      .panel-scroll::-webkit-scrollbar {
+        width: 6px;
+      }
+      .panel-scroll::-webkit-scrollbar-thumb {
+        background: rgba(201, 162, 39, 0.35);
+        border-radius: 4px;
+      }
+      .points-list::-webkit-scrollbar {
+        width: 6px;
+      }
+      .points-list::-webkit-scrollbar-thumb {
+        background: rgba(201, 162, 39, 0.35);
+        border-radius: 4px;
+      }
+
+      /* ---------- control panel ---------- */
+      .control-panel {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        bottom: 16px;
+        width: 320px;
+        z-index: 500;
+        background: var(--panel-bg);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        box-shadow:
+          0 8px 32px rgba(0, 0, 0, 0.45),
+          inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        transition:
+          transform 0.35s ease,
+          opacity 0.35s ease;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .control-panel {
+        display: none !important;
+      }
+      .panel-scroll {
+        overflow-y: auto;
+        padding: 20px;
+        flex: 1;
+      }
+
+      .panel-toggle {
+        display: none !important;
+      }
+      .panel-toggle.is-collapsed {
+        left: 16px;
+      }
+      .panel-toggle:hover {
+        color: #fff;
+      }
+
+      .eyebrow {
+        font-family: var(--font-mono);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-size: 11px;
+        color: var(--brass);
+        margin-bottom: 6px;
+      }
+      .panel-header h1 {
+        font-family: var(--font-display);
+        font-size: 22px;
+        line-height: 1.2;
+        margin: 0 0 8px;
+        color: var(--text);
+        font-weight: 700;
+      }
+      .subtitle {
+        font-size: 12.5px;
+        color: var(--text-dim);
+        line-height: 1.5;
+        margin: 0 0 16px;
+      }
+
+      .divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(201, 162, 39, 0.35), transparent);
+        margin: 16px 0;
+      }
+
+      .section-title {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--brass);
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .count-badge {
+        background: rgba(201, 162, 39, 0.14);
+        border: 1px solid var(--panel-border);
+        color: var(--brass-bright);
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-size: 10.5px;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      .field {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 9px 10px;
+        color: var(--text);
+        font-size: 13px;
+        font-family: var(--font-body);
+        margin-bottom: 8px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .field:focus {
+        border-color: var(--brass);
+      }
+      .field::placeholder {
+        color: var(--text-dim);
+      }
+      select.field {
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa3b8' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 16px;
+        padding-right: 32px;
+      }
+      select.field option {
+        background: #0d1633;
+        color: var(--text);
+      }
+
+      .coord-row {
+        display: flex;
+        gap: 8px;
+      }
+      .coord-row .field {
+        margin-bottom: 8px;
+      }
+      .mode-field-wrap {
+        display: flex;
+      }
+      .hint {
+        font-size: 11px;
+        color: var(--text-dim);
+        margin: 2px 0 12px;
+        line-height: 1.4;
+      }
+
+      .btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 9px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        font-size: 13px;
+        font-family: var(--font-body);
+        font-weight: 600;
+        transition:
+          filter 0.15s,
+          transform 0.1s;
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+      .btn-demo {
+        background: rgba(201, 162, 39, 0.12);
+        border: 1px solid var(--panel-border);
+        color: var(--brass-bright);
+        margin-bottom: 4px;
+      }
+      .btn-demo:hover {
+        background: rgba(201, 162, 39, 0.2);
+      }
+      .btn-primary {
+        background: linear-gradient(180deg, var(--brass-bright), var(--brass));
+        color: #241a04;
+        margin-top: 2px;
+      }
+      .btn-primary:hover {
+        filter: brightness(1.08);
+      }
+      .btn-ghost {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--text-dim);
+        margin-top: 10px;
+      }
+      .btn-ghost:hover {
+        border-color: rgba(239, 91, 91, 0.5);
+        color: var(--rail);
+      }
+
+      .points-list {
+        max-height: 280px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 4px;
+      }
+      .empty-hint {
+        font-size: 12px;
+        color: var(--text-dim);
+        line-height: 1.5;
+        padding: 14px 10px;
+        border: 1px dashed rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        text-align: center;
+      }
+      .wp-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 9px;
+      }
+      .wp-idx {
+        width: 20px;
+        height: 20px;
+        flex: none;
+        border-radius: 50%;
+        background: rgba(201, 162, 39, 0.15);
+        border: 1px solid var(--panel-border);
+        color: var(--brass-bright);
+        font-size: 10.5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-mono);
+      }
+      .wp-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .wp-name {
+        font-size: 12.5px;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .wp-coords {
+        font-size: 10.5px;
+        color: var(--text-dim);
+        font-family: var(--font-mono);
+      }
+      .wp-mode {
+        flex: none;
+        font-size: 10px;
+        border: 1px solid;
+        border-radius: 20px;
+        padding: 3px 7px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+      }
+      .wp-mode-start {
+        color: var(--brass-bright);
+        border-color: var(--panel-border);
+      }
+      .wp-actions {
+        flex: none;
+        display: flex;
+        gap: 2px;
+      }
+      .icon-btn {
+        width: 20px;
+        height: 20px;
+        border: none;
+        background: transparent;
+        color: var(--text-dim);
+        cursor: pointer;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+      }
+      .icon-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+      }
+      .icon-btn.danger:hover {
+        background: rgba(239, 91, 91, 0.15);
+        color: var(--rail);
+      }
+      .icon-btn:disabled {
+        opacity: 0.25;
+        cursor: default;
+      }
+      .icon-btn:disabled:hover {
+        background: transparent;
+        color: var(--text-dim);
+      }
+
+      /* ---------- legend ---------- */
+      .legend-panel {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        z-index: 500;
+        background: var(--panel-bg);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 12px 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      }
+      .legend-title {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--brass);
+        margin-bottom: 8px;
+      }
+      .legend-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 12px;
+        color: var(--text);
+        padding: 4px 0;
+      }
+      .legend-swatch {
+        width: 22px;
+        height: 0;
+        flex: none;
+      }
+      .swatch-road {
+        border-top: 3px solid var(--road);
+      }
+      .swatch-flight {
+        border-top: 3px dotted var(--flight);
+      }
+      .swatch-cruise {
+        border-top: 3px solid var(--cruise);
+      }
+      .swatch-rail {
+        border-top: 3px dashed var(--rail);
+      }
+
+      /* ---------- playback bar ---------- */
+      .playback-bar {
+        position: absolute;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        z-index: 500;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 18px;
+        min-width: 420px;
+        max-width: 640px;
+        background: var(--panel-bg);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid var(--panel-border);
+        border-radius: 40px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+      }
+      .transport-btn {
+        width: 38px;
+        height: 38px;
+        flex: none;
+        border-radius: 50%;
+        border: 1px solid var(--panel-border);
+        background: linear-gradient(180deg, rgba(201, 162, 39, 0.22), rgba(201, 162, 39, 0.08));
+        color: var(--brass-bright);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        transition: filter 0.15s;
+      }
+      .transport-btn:hover {
+        filter: brightness(1.25);
+      }
+      .progress-wrap {
+        flex: 1;
+        min-width: 140px;
+      }
+      .leg-text {
+        font-size: 11.5px;
+        color: var(--text-dim);
+        margin-bottom: 5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .progress-track {
+        height: 4px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+      }
+      .progress-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--brass), var(--brass-bright));
+        transition: width 0.05s linear;
+      }
+      .speed-wrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: none;
+      }
+      .speed-label {
+        font-size: 10.5px;
+        color: var(--text-dim);
+        font-family: var(--font-mono);
+      }
+      .speed-readout {
+        font-size: 11px;
+        color: var(--brass-bright);
+        font-family: var(--font-mono);
+        width: 38px;
+      }
+      input[type='range'] {
+        width: 70px;
+        accent-color: var(--brass);
+      }
+
+      /* ---------- toast ---------- */
+      .toast {
+        position: absolute;
+        left: 50%;
+        bottom: 78px;
+        transform: translateX(-50%) translateY(8px);
+        z-index: 600;
+        background: rgba(10, 17, 40, 0.92);
+        border: 1px solid var(--panel-border);
+        color: var(--text);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 12.5px;
+        opacity: 0;
+        pointer-events: none;
+        transition:
+          opacity 0.3s,
+          transform 0.3s;
+        white-space: nowrap;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      /* ---------- export mode: hide interactive chrome, keep map + legend ---------- */
+      body.exporting #controlPanel,
+      body.exporting #panelToggle,
+      body.exporting .playback-bar,
+      body.exporting #toast,
+      body.exporting .leaflet-control-zoom,
+      body.exporting .leaflet-control-attribution {
+        display: none !important;
+      }
+      .export-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 14px;
+        background: rgba(6, 10, 25, 0.82);
+        backdrop-filter: blur(3px);
+        font-family: var(--font-body);
+        color: var(--text);
+      }
+      .export-overlay.is-active {
+        display: flex;
+      }
+      .export-overlay h2 {
+        font-family: var(--font-display);
+        font-size: 19px;
+        margin: 0;
+      }
+      .export-status {
+        font-size: 12.5px;
+        color: var(--text-dim);
+        font-family: var(--font-mono);
+      }
+      .export-track {
+        width: 280px;
+        height: 5px;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+      }
+      .export-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--brass), var(--brass-bright));
+        transition: width 0.12s linear;
+      }
+
+      /* ---------- leaflet overrides ---------- */
+      .leaflet-control-zoom a {
+        background: rgba(10, 17, 40, 0.85) !important;
+        color: var(--text) !important;
+        border-color: var(--panel-border) !important;
+      }
+      .leaflet-control-zoom a:hover {
+        background: rgba(201, 162, 39, 0.25) !important;
+      }
+      .leaflet-tooltip.leaflet-tip {
+        background: rgba(10, 17, 40, 0.92);
+        color: var(--text);
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        font-family: var(--font-body);
+        font-size: 11.5px;
+        padding: 4px 9px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      }
+      .leaflet-tooltip-top.leaflet-tip::before {
+        border-top-color: rgba(10, 17, 40, 0.92);
+      }
+
+      /* ---------- preview markers ---------- */
+      .preview-dot {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: rgba(10, 17, 40, 0.85);
+        border: 2px solid var(--brass);
+        color: var(--brass-bright);
+        font-size: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-mono);
+      }
+      .preview-dot.is-start {
+        border-color: #7ddc8c;
+        color: #7ddc8c;
+      }
+      .preview-dot.is-end {
+        border-color: var(--rail);
+        color: var(--rail);
+      }
+      .preview-line {
+        transition: opacity 0.3s;
+      }
+
+      /* ---------- glow route lines ---------- */
+      .glow-road {
+        filter: drop-shadow(0 0 5px rgba(232, 226, 208, 0.8));
+      }
+      .glow-flight {
+        filter: drop-shadow(0 0 5px rgba(159, 180, 199, 0.85));
+      }
+      .glow-cruise {
+        filter: drop-shadow(0 0 6px rgba(79, 168, 224, 0.9));
+      }
+      .glow-rail {
+        filter: drop-shadow(0 0 6px rgba(239, 91, 91, 0.9));
+      }
+
+      /* ---------- vehicle icon (realistic, rotates to heading) ---------- */
+      .vehicle-icon-wrap {
+        position: relative;
+        width: 56px;
+        height: 56px;
+      }
+      .vehicle-glow {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        filter: blur(9px);
+        opacity: 0.5;
+        animation: vehiclePulse 1.8s ease-in-out infinite;
+      }
+      .vehicle-svg {
+        position: absolute;
+        left: 0;
+        top: 0;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+      }
+      @keyframes vehiclePulse {
+        0%,
+        100% {
+          opacity: 0.32;
+          transform: translate(-50%, -50%) scale(0.85);
+        }
+        50% {
+          opacity: 0.62;
+          transform: translate(-50%, -50%) scale(1.15);
+        }
+      }
+
+      /* ---------- waypoint arrival label ---------- */
+      .wp-label-wrap {
+        overflow: visible !important;
+      }
+      .wp-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--brass-bright);
+        box-shadow: 0 0 8px var(--brass-bright);
+      }
+      .wp-dot.wp-start {
+        background: #7ddc8c;
+        box-shadow: 0 0 8px #7ddc8c;
+      }
+      .wp-plaque {
+        position: absolute;
+        left: 18px;
+        top: -9px;
+        white-space: nowrap;
+        font-family: var(--font-display);
+        font-size: 13px;
+        color: var(--text);
+        background: rgba(10, 17, 40, 0.85);
+        border: 1px solid var(--panel-border);
+        border-radius: 5px;
+        padding: 3px 9px;
+        opacity: 1;
+      }
+      .wp-plaque::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 50%;
+        transform: translateY(-50%);
+        border-top: 5px solid transparent;
+        border-bottom: 5px solid transparent;
+        border-right: 6px solid rgba(10, 17, 40, 0.85);
+      }
+
+      @media (max-width: 760px) {
+        .control-panel {
+          width: 86vw;
+          left: 8px;
+          top: 8px;
+          bottom: 8px;
+        }
+        .panel-toggle {
+          left: calc(86vw + 20px);
+        }
+        .panel-toggle.is-collapsed {
+          left: 8px;
+        }
+        .legend-panel {
+          top: 8px;
+          right: 8px;
+          padding: 8px 12px;
+        }
+        .legend-row {
+          font-size: 11px;
+        }
+        .playback-bar {
+          min-width: 88vw;
+          max-width: 94vw;
+          bottom: 10px;
+          padding: 8px 12px;
+          gap: 8px;
+        }
+        .speed-wrap {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div class="vignette"></div>
+
+    <button id="panelToggle" class="panel-toggle" title="Toggle control panel">
+      <i class="fa-solid fa-chevron-left"></i>
+    </button>
+
+    <aside id="controlPanel" class="control-panel">
+      <div class="panel-scroll">
+        <div class="panel-header">
+          <div class="eyebrow">⚓ Expedition Log</div>
+          <h1>Cinematic Route Animator</h1>
+          <p class="subtitle">
+            Plot waypoints, choose your vessel, and watch the journey unfold across a living map.
+          </p>
+        </div>
+
+        <div class="section-title">
+          Route <span id="routeCount" class="count-badge">0 points</span>
+        </div>
+        <div id="pointsList" class="points-list"></div>
+        <button class="btn btn-ghost" onclick="clearAll()">
+          <i class="fa-solid fa-trash"></i> Clear All
+        </button>
+      </div>
+    </aside>
+
+    <div class="legend-panel">
+      <div class="legend-title">Legend</div>
+      <div class="legend-row"><span class="legend-swatch swatch-road"></span> Land</div>
+      <div class="legend-row"><span class="legend-swatch swatch-flight"></span> Flights</div>
+      <div class="legend-row"><span class="legend-swatch swatch-cruise"></span> Cruise</div>
+      <div class="legend-row"><span class="legend-swatch swatch-rail"></span> Rail</div>
+    </div>
+
+    <div class="playback-bar">
+      <button id="playBtn" class="transport-btn" title="Play">
+        <i class="fa-solid fa-play"></i>
+      </button>
+      <button id="resetBtn" class="transport-btn" title="Reset">
+        <i class="fa-solid fa-rotate-left"></i>
+      </button>
+      <div class="progress-wrap">
+        <div class="leg-text" id="legText">Add waypoints to plan your route.</div>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+      <div class="speed-wrap">
+        <span class="speed-label">SPEED</span>
+        <input id="speedSlider" type="range" min="0.5" max="3" step="0.25" value="1" />
+        <span id="speedReadout" class="speed-readout">1.00×</span>
+      </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <div id="exportOverlay" class="export-overlay">
+      <h2>Rendering your journey…</h2>
+      <div class="export-track"><div id="exportFill" class="export-fill"></div></div>
+      <div id="exportStatus" class="export-status">Preparing…</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+      /* ===================== Cinematic Route Animator ===================== */
+
+      const MODES = {
+        road: { label: 'Road', color: '#2c3e50', dash: null, icon: 'fa-car-side' },
+        flight: { label: 'Flight', color: '#2980b9', dash: '1 9', icon: 'fa-plane' },
+        cruise: { label: 'Cruise', color: '#27ae60', dash: null, icon: 'fa-ship' },
+        rail: { label: 'Rail', color: '#c0392b', dash: '11 7', icon: 'fa-train-subway' },
+      };
+
+      const DEMO_ROUTE = [
+        { name: 'Oslo', lat: 59.9139, lng: 10.7522, mode: null },
+        { name: 'Flåm', lat: 60.8624, lng: 7.1145, mode: 'rail' },
+        { name: 'Voss', lat: 60.6293, lng: 6.4181, mode: 'road' },
+        { name: 'Ålesund', lat: 62.472, lng: 6.1549, mode: 'road' },
+        { name: 'Trondheim', lat: 63.4305, lng: 10.3951, mode: 'cruise' },
+        { name: 'Rørvik', lat: 64.86, lng: 11.24, mode: 'cruise' },
+        { name: 'Bodø', lat: 67.2804, lng: 14.4049, mode: 'cruise' },
+        { name: 'Finnsnes', lat: 69.23, lng: 17.98, mode: 'cruise' },
+        { name: 'Tromsø', lat: 69.6492, lng: 18.9553, mode: 'cruise' },
+        { name: 'Mehamn', lat: 71.0357, lng: 27.8492, mode: 'cruise' },
+        { name: 'Kirkenes', lat: 69.7273, lng: 30.045, mode: 'cruise' },
+        { name: 'Inari', lat: 68.9056, lng: 27.0287, mode: 'cruise' },
+        { name: 'Saariselkä', lat: 68.4189, lng: 27.4181, mode: 'cruise' },
+        { name: 'Rovaniemi', lat: 66.5039, lng: 25.7294, mode: 'cruise' },
+        { name: 'Helsinki', lat: 60.1699, lng: 24.9384, mode: 'rail' },
+      ];
+
+      let map, previewLayer, animLayer;
+      let points = [];
+      let pointSeq = 1;
+
+      let segments = [];
+      let segIndex = 0;
+      let segElapsed = 0;
+      let segStartTS = 0;
+      let runToken = 0;
+      let animId = null;
+      let isPlaying = false;
+      let isLoadingRoute = false;
+      let isPaused = false;
+      let speedMultiplier = 1;
+      let movingMarker = null;
+      let activeLine = null;
+      let cameraCenter = null;
+      let tileLayer = null;
+      let tilesLoading = false;
+
+      const prefersReducedMotion = !!(
+        window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      );
+
+      let legText, progressFill, toastEl;
+      let toastTimer = null;
+
+      /* ---------- math helpers ---------- */
+      function toRad(d) {
+        return (d * Math.PI) / 180;
+      }
+      function toDeg(r) {
+        return (r * 180) / Math.PI;
+      }
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+      function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      }
+
+      function haversine(a, b) {
+        const R = 6371;
+        const dLat = toRad(b.lat - a.lat);
+        const dLng = toRad(b.lng - a.lng);
+        const la1 = toRad(a.lat),
+          la2 = toRad(b.lat);
+        const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(h));
+      }
+
+      function bearing(a, b) {
+        const la1 = toRad(a.lat),
+          la2 = toRad(b.lat),
+          dLng = toRad(b.lng - a.lng);
+        const y = Math.sin(dLng) * Math.cos(la2);
+        const x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dLng);
+        return (toDeg(Math.atan2(y, x)) + 360) % 360;
+      }
+
+      function greatArcControl(from, to) {
+        const mid = { lat: (from.lat + to.lat) / 2, lng: (from.lng + to.lng) / 2 };
+        const dLat = to.lat - from.lat,
+          dLng = to.lng - from.lng;
+        const dist = Math.sqrt(dLat * dLat + dLng * dLng) || 0.0001;
+        const perp = { lat: -dLng, lng: dLat };
+        const norm = Math.sqrt(perp.lat ** 2 + perp.lng ** 2) || 1;
+        const factor = dist * 0.18;
+        return {
+          lat: mid.lat + (perp.lat / norm) * factor,
+          lng: mid.lng + (perp.lng / norm) * factor,
+        };
+      }
+
+      /* ---------- position-along-path (arc-length interpolation) ----------
+   Works identically whether seg.path came from a real routing service or
+   a straight-line fallback: seg.path is just an array of [lat,lng] points
+   and seg.cum is their cumulative distance, so the vehicle always moves at
+   an even pace along the *real* shape of the road/rail/lane, not a chord. */
+      function pointAtT(seg, t) {
+        const path = seg.path,
+          cum = seg.cum;
+        const total = cum[cum.length - 1];
+        if (!total) {
+          return { lat: path[0][0], lng: path[0][1] };
+        }
+        const target = Math.max(0, Math.min(total, t * total));
+        let lo = 1,
+          hi = cum.length - 1;
+        while (lo < hi) {
+          const mid = (lo + hi) >> 1;
+          if (cum[mid] < target) lo = mid + 1;
+          else hi = mid;
+        }
+        const d0 = cum[lo - 1],
+          d1 = cum[lo];
+        const lt = d1 > d0 ? (target - d0) / (d1 - d0) : 0;
+        const p0 = path[lo - 1],
+          p1 = path[lo];
+        return { lat: p0[0] + (p1[0] - p0[0]) * lt, lng: p0[1] + (p1[1] - p0[1]) * lt };
+      }
+
+      function buildCumulativeDistances(path) {
+        const cum = [0];
+        for (let i = 1; i < path.length; i++) {
+          cum.push(
+            cum[i - 1] +
+              haversine(
+                { lat: path[i - 1][0], lng: path[i - 1][1] },
+                { lat: path[i][0], lng: path[i][1] },
+              ),
+          );
+        }
+        return cum;
+      }
+
+      function segmentDuration(seg) {
+        const base = 2200;
+        const extra = Math.min(4200, seg.distanceKm * 3.2);
+        return base + extra;
+      }
+
+      /* ---------- real routing engine ---------- */
+      const routeCache = {};
+
+      function segCacheKey(from, to, mode) {
+        return (
+          mode +
+          '|' +
+          from.lat.toFixed(4) +
+          ',' +
+          from.lng.toFixed(4) +
+          '|' +
+          to.lat.toFixed(4) +
+          ',' +
+          to.lng.toFixed(4)
+        );
+      }
+
+      function fetchWithTimeout(url, ms) {
+        const controller = new AbortController();
+        const timer = setTimeout(function () {
+          controller.abort();
+        }, ms || 8000);
+        return fetch(url, { signal: controller.signal }).finally(function () {
+          clearTimeout(timer);
+        });
+      }
+
+      /* Real, turn-by-turn driving route from OSRM's public demo server (free,
+   no key, CORS-enabled — but a shared demo instance, so it can be slow or
+   rate-limited). */
+      async function fetchRoadPath(from, to) {
+        const url =
+          'https://router.project-osrm.org/route/v1/driving/' +
+          from.lng +
+          ',' +
+          from.lat +
+          ';' +
+          to.lng +
+          ',' +
+          to.lat +
+          '?overview=full&geometries=geojson';
+        const res = await fetchWithTimeout(url, 8000);
+        if (!res.ok) throw new Error('OSRM HTTP ' + res.status);
+        const data = await res.json();
+        if (data.code !== 'Ok' || !data.routes || !data.routes.length)
+          throw new Error('OSRM: ' + (data.code || 'no route'));
+        return data.routes[0].geometry.coordinates.map(function (c) {
+          return [c[1], c[0]];
+        });
+      }
+
+      /* There is no free, reliable, worldwide rail-specific routing API. Real rail
+   lines usually thread the same valleys and mountain passes as roads, so we
+   reuse OSRM's driving route as a terrain-following stand-in instead of
+   drawing a straight line through mountains. */
+      async function fetchRailPath(from, to) {
+        return fetchRoadPath(from, to);
+      }
+
+      /* Realistic shipping-lane route (follows real marine traffic lanes, routes
+   around landmasses/peninsulas) via the searoute-ts library, loaded on
+   demand from a CDN. Runs entirely client-side once loaded — no API key,
+   no per-request network call. */
+      let seaRouteFnPromise = null;
+      function loadSeaRoute() {
+        if (!seaRouteFnPromise) {
+          seaRouteFnPromise = import('https://cdn.jsdelivr.net/npm/searoute-ts@2.2.0/+esm').then(
+            function (mod) {
+              return mod.seaRoute;
+            },
+          );
+        }
+        return seaRouteFnPromise;
+      }
+      async function fetchCruisePath(from, to) {
+        const seaRoute = await loadSeaRoute();
+        const feat = seaRoute([from.lng, from.lat], [to.lng, to.lat]);
+        const coords = feat && feat.geometry && feat.geometry.coordinates;
+        if (!coords || coords.length < 2) throw new Error('searoute: empty geometry');
+        return coords.map(function (c) {
+          return [c[1], c[0]];
+        });
+      }
+
+      /* Flights are already realistically drawn as a smooth great-circle-style
+   arc — just sample it into the same [lat,lng] point-array shape as the
+   other modes so one interpolator (pointAtT) can drive everything. */
+      function flightArcPath(from, to) {
+        const c = greatArcControl(from, to);
+        const pts = [];
+        for (let s = 0; s <= 48; s++) {
+          const t = s / 48,
+            mt = 1 - t;
+          pts.push([
+            mt * mt * from.lat + 2 * mt * t * c.lat + t * t * to.lat,
+            mt * mt * from.lng + 2 * mt * t * c.lng + t * t * to.lng,
+          ]);
+        }
+        return pts;
+      }
+
+      function computeSegmentPath(from, to, mode) {
+        const key = segCacheKey(from, to, mode);
+        if (routeCache[key]) return routeCache[key];
+        const promise = (async function () {
+          try {
+            let path;
+            if (mode === 'road') path = await fetchRoadPath(from, to);
+            else if (mode === 'rail') path = await fetchRailPath(from, to);
+            else if (mode === 'cruise') path = await fetchCruisePath(from, to);
+            else path = flightArcPath(from, to);
+            if (!path || path.length < 2) throw new Error('empty path');
+            return { path: path, fallback: false };
+          } catch (err) {
+            console.warn(
+              'Falling back to a straight line for ' + mode + ' leg:',
+              err && err.message,
+            );
+            return {
+              path: [
+                [from.lat, from.lng],
+                [to.lat, to.lng],
+              ],
+              fallback: true,
+            };
+          }
+        })();
+        routeCache[key] = promise;
+        return promise;
+      }
+
+      async function buildSegments() {
+        const legs = [];
+        for (let i = 1; i < points.length; i++) {
+          const from = points[i - 1],
+            to = points[i];
+          const mode = to.mode || 'road';
+          legs.push({ from: from, to: to, mode: mode, distanceKm: haversine(from, to) });
+        }
+        let fallbackCount = 0;
+        await Promise.all(
+          legs.map(function (seg) {
+            return computeSegmentPath(seg.from, seg.to, seg.mode).then(function (res) {
+              seg.path = res.path;
+              seg.cum = buildCumulativeDistances(res.path);
+              seg.distanceKm = seg.cum[seg.cum.length - 1] || seg.distanceKm;
+              if (res.fallback) fallbackCount++;
+            });
+          }),
+        );
+        return { segments: legs, fallbackCount: fallbackCount };
+      }
+
+      function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      /* ---------- toast ---------- */
+      function showToast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () {
+          toastEl.classList.remove('show');
+        }, 2600);
+      }
+
+      /* ---------- vehicle icon (realistic, top-down, rotates to heading) ---------- */
+      function vehicleBodyMarkup(mode, color) {
+        if (mode === 'road') {
+          return (
+            '<ellipse cx="28" cy="30" rx="13" ry="18" fill="rgba(0,0,0,0.35)"/>' +
+            '<rect x="16" y="11" width="24" height="34" rx="7" fill="#d8dadf" stroke="#7d818a" stroke-width="1.2"/>' +
+            '<rect x="19" y="17" width="18" height="10" rx="3" fill="#24314a" opacity="0.92"/>' +
+            '<rect x="19" y="31" width="18" height="7" rx="2" fill="#24314a" opacity="0.7"/>' +
+            '<rect x="21" y="27" width="14" height="4" fill="' +
+            color +
+            '" opacity="0.9"/>' +
+            '<rect x="17.5" y="12" width="4" height="2.4" rx="1" fill="#ffe27a"/>' +
+            '<rect x="34.5" y="12" width="4" height="2.4" rx="1" fill="#ffe27a"/>' +
+            '<rect x="17.5" y="40.6" width="4" height="2.4" rx="1" fill="#ff5b5b"/>' +
+            '<rect x="34.5" y="40.6" width="4" height="2.4" rx="1" fill="#ff5b5b"/>' +
+            '<rect x="13" y="16" width="4" height="9" rx="2" fill="#1b1d22"/>' +
+            '<rect x="39" y="16" width="4" height="9" rx="2" fill="#1b1d22"/>' +
+            '<rect x="13" y="32" width="4" height="9" rx="2" fill="#1b1d22"/>' +
+            '<rect x="39" y="32" width="4" height="9" rx="2" fill="#1b1d22"/>'
+          );
+        }
+        if (mode === 'rail') {
+          return (
+            '<rect x="17" y="6" width="22" height="46" rx="8" fill="rgba(0,0,0,0.32)"/>' +
+            '<rect x="19" y="29" width="18" height="21" rx="3" fill="#3a3f4b" stroke="#20232b" stroke-width="1"/>' +
+            '<rect x="21" y="32" width="14" height="4" rx="1.4" fill="#bcd8ea" opacity="0.85"/>' +
+            '<rect x="21" y="38" width="14" height="4" rx="1.4" fill="#bcd8ea" opacity="0.85"/>' +
+            '<rect x="21" y="44" width="14" height="3" rx="1.2" fill="#bcd8ea" opacity="0.6"/>' +
+            '<rect x="25" y="26" width="6" height="4" fill="#20232b"/>' +
+            '<path d="M19 25 L19 11 Q19 4 28 4 Q37 4 37 11 L37 25 Z" fill="' +
+            color +
+            '" stroke="#1c1e24" stroke-width="1.2"/>' +
+            '<path d="M22 13 Q22 9 28 9 Q34 9 34 13 L34 19 L22 19 Z" fill="#cdeaff" opacity="0.9"/>' +
+            '<circle cx="28" cy="7" r="2" fill="#fff6c9"/>' +
+            '<rect x="19" y="21" width="18" height="2.4" fill="#ffffff" opacity="0.5"/>'
+          );
+        }
+        if (mode === 'flight') {
+          return (
+            '<ellipse cx="28" cy="32" rx="10" ry="16" fill="rgba(0,0,0,0.3)"/>' +
+            '<path d="M28 5 L31 19 L47 33 L47 37 L31 31 L33 45 L39 49 L39 52 L28 49 L17 52 L17 49 L23 45 L25 31 L9 37 L9 33 L25 19 Z" fill="' +
+            color +
+            '" stroke="#1c1e24" stroke-width="1"/>' +
+            '<circle cx="28" cy="13" r="2" fill="#ffffff"/>'
+          );
+        }
+        /* cruise */
+        return (
+          '<ellipse cx="28" cy="36" rx="12" ry="15" fill="rgba(0,0,0,0.3)"/>' +
+          '<path d="M28 8 L38 32 L38 46 Q38 50 28 50 Q18 50 18 46 L18 32 Z" fill="' +
+          color +
+          '" stroke="#1c1e24" stroke-width="1.2"/>' +
+          '<rect x="23" y="28" width="10" height="15" rx="2" fill="#e7ecf2" opacity="0.9"/>' +
+          '<rect x="25" y="20" width="6" height="8" rx="1.5" fill="#24314a"/>'
+        );
+      }
+
+      function createVehicleIcon(mode) {
+        const cfg = MODES[mode];
+        const body = vehicleBodyMarkup(mode, cfg.color);
+        const html =
+          '<div class="vehicle-icon-wrap">' +
+          '<div class="vehicle-glow" style="background:' +
+          cfg.color +
+          '"></div>' +
+          '<svg class="vehicle-svg" viewBox="0 0 56 56" width="56" height="56">' +
+          '<g class="vehicle-rotate" transform="rotate(0,28,28)">' +
+          body +
+          '</g>' +
+          '</svg>' +
+          '</div>';
+        return L.divIcon({
+          className: 'vehicle-icon-wrap-outer',
+          html: html,
+          iconSize: [56, 56],
+          iconAnchor: [28, 28],
+        });
+      }
+
+      /* Rotates the vehicle in place by updating the SVG group's transform attribute
+   directly, instead of tearing down and rebuilding the marker's icon every
+   frame (which was the cause of the flicker/"breaking" glitch during playback). */
+      function setVehicleHeading(marker, headingDeg) {
+        const el = marker.getElement();
+        if (!el) return;
+        const g = el.querySelector('.vehicle-rotate');
+        if (g) g.setAttribute('transform', 'rotate(' + headingDeg + ',28,28)');
+      }
+
+      /* ---------- preview (static) ---------- */
+      function drawPreview() {
+        previewLayer.clearLayers();
+        if (points.length === 0) return;
+
+        points.forEach(function (p, i) {
+          const isStart = i === 0;
+          const isEnd = i === points.length - 1 && points.length > 1;
+          let inner = String(i + 1);
+          if (isStart) inner = '<i class="fa-solid fa-flag"></i>';
+          else if (isEnd) inner = '<i class="fa-solid fa-flag-checkered"></i>';
+          const cls = 'preview-dot' + (isStart ? ' is-start' : '') + (isEnd ? ' is-end' : '');
+          const icon = L.divIcon({
+            className: 'preview-marker-wrap',
+            html: '<div class="' + cls + '">' + inner + '</div>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13],
+          });
+          L.marker([p.lat, p.lng], { icon: icon })
+            .bindTooltip(p.name || 'Point ' + (i + 1), {
+              permanent: true,
+              direction: 'right',
+              offset: [12, 0],
+              className: 'leaflet-tip',
+            })
+            .addTo(previewLayer);
+        });
+
+        for (let i = 1; i < points.length; i++) {
+          const from = points[i - 1],
+            to = points[i];
+          const mode = to.mode || 'road';
+          const cfg = MODES[mode];
+          let latlngs;
+          if (mode === 'flight') {
+            const c = greatArcControl(from, to);
+            latlngs = [];
+            for (let s = 0; s <= 40; s++) {
+              const t = s / 40,
+                mt = 1 - t;
+              latlngs.push([
+                mt * mt * from.lat + 2 * mt * t * c.lat + t * t * to.lat,
+                mt * mt * from.lng + 2 * mt * t * c.lng + t * t * to.lng,
+              ]);
+            }
+          } else {
+            latlngs = [
+              [from.lat, from.lng],
+              [to.lat, to.lng],
+            ];
+          }
+          L.polyline(latlngs, {
+            color: cfg.color,
+            weight: 2.5,
+            opacity: 0.4,
+            dashArray: cfg.dash,
+            className: 'preview-line',
+          }).addTo(previewLayer);
+        }
+      }
+
+      /* ---------- waypoint arrival label ---------- */
+      function dropWaypointLabel(p, isStart) {
+        const html =
+          '<div class="wp-dot' +
+          (isStart ? ' wp-start' : '') +
+          '"></div><div class="wp-plaque">' +
+          escapeHtml(p.name || '') +
+          '</div>';
+        const icon = L.divIcon({
+          className: 'wp-label-wrap',
+          html: html,
+          iconSize: [10, 10],
+          iconAnchor: [5, 5],
+        });
+        const m = L.marker([p.lat, p.lng], { icon: icon, zIndexOffset: 500 }).addTo(animLayer);
+        /* During export the fade-in must be immediate: rAF is throttled in background
+     tabs, and the frame is rasterised right away — a deferred class would mean
+     the label never shows up in the captured frames. */
+        if (document.body.classList.contains('exporting')) {
+          const el = m.getElement();
+          if (el) el.classList.add('in');
+          return;
+        }
+        requestAnimationFrame(function () {
+          const el = m.getElement();
+          if (el) el.classList.add('in');
+        });
+      }
+
+      /* ---------- points list UI ---------- */
+      function updateModeFieldVisibility() {
+        const wrap = document.getElementById('modeFieldWrap');
+        if (wrap) {
+          wrap.style.display = points.length === 0 ? 'none' : 'flex';
+        }
+        const hint = document.getElementById('addPointHint');
+        if (hint) {
+          hint.textContent =
+            points.length === 0
+              ? 'This will be your starting point.'
+              : 'Choose how you travel to this point from the previous one.';
+        }
+      }
+
+      function renderPointsList() {
+        const list = document.getElementById('pointsList');
+        if (points.length === 0) {
+          list.innerHTML =
+            '<div class="empty-hint">No waypoints yet. Add your first point above, or click anywhere on the map to capture coordinates.</div>';
+        } else {
+          list.innerHTML = points
+            .map(function (p, i) {
+              const modeCfg = p.mode ? MODES[p.mode] : null;
+              const modeHtml = modeCfg
+                ? '<div class="wp-mode" style="color:' +
+                  modeCfg.color +
+                  ';border-color:' +
+                  modeCfg.color +
+                  '"><i class="fa-solid ' +
+                  modeCfg.icon +
+                  '"></i> ' +
+                  modeCfg.label +
+                  '</div>'
+                : '<div class="wp-mode wp-mode-start">START</div>';
+              return (
+                '<div class="wp-row">' +
+                '<div class="wp-idx">' +
+                (i + 1) +
+                '</div>' +
+                '<div class="wp-info">' +
+                '<div class="wp-name">' +
+                escapeHtml(p.name) +
+                '</div>' +
+                '<div class="wp-coords">' +
+                p.lat.toFixed(3) +
+                ', ' +
+                p.lng.toFixed(3) +
+                '</div>' +
+                '</div>' +
+                modeHtml +
+                '<div class="wp-actions">' +
+                '<button class="icon-btn" title="Move up" onclick="movePoint(\'' +
+                p.id +
+                '\',-1)" ' +
+                (i === 0 ? 'disabled' : '') +
+                '><i class="fa-solid fa-chevron-up"></i></button>' +
+                '<button class="icon-btn" title="Move down" onclick="movePoint(\'' +
+                p.id +
+                '\',1)" ' +
+                (i === points.length - 1 ? 'disabled' : '') +
+                '><i class="fa-solid fa-chevron-down"></i></button>' +
+                '<button class="icon-btn danger" title="Remove" onclick="deletePoint(\'' +
+                p.id +
+                '\')"><i class="fa-solid fa-xmark"></i></button>' +
+                '</div>' +
+                '</div>'
+              );
+            })
+            .join('');
+        }
+        updateModeFieldVisibility();
+        const routeCount = document.getElementById('routeCount');
+        if (routeCount) {
+          routeCount.textContent = points.length + (points.length === 1 ? ' point' : ' points');
+        }
+      }
+
+      function fitAll(duration) {
+        if (points.length === 0) return;
+        const bounds = L.latLngBounds(
+          points.map(function (p) {
+            return [p.lat, p.lng];
+          }),
+        );
+        map.flyToBounds(bounds, { padding: [90, 90], duration: duration || 0.8, maxZoom: 9 });
+      }
+
+      function handleAddPoint() {
+        const nameEl = document.getElementById('inName');
+        const latEl = document.getElementById('inLat');
+        const lngEl = document.getElementById('inLng');
+        const modeEl = document.getElementById('inMode');
+
+        const lat = parseFloat(latEl.value);
+        const lng = parseFloat(lngEl.value);
+
+        if (Number.isNaN(lat) || lat < -90 || lat > 90) {
+          showToast('Enter a valid latitude (-90 to 90).');
+          latEl.focus();
+          return;
+        }
+        if (Number.isNaN(lng) || lng < -180 || lng > 180) {
+          showToast('Enter a valid longitude (-180 to 180).');
+          lngEl.focus();
+          return;
+        }
+
+        const name = nameEl.value.trim() || 'Point ' + (points.length + 1);
+        const mode = points.length === 0 ? null : modeEl.value;
+
+        points.push({ id: 'p' + pointSeq++, name: name, lat: lat, lng: lng, mode: mode });
+
+        nameEl.value = '';
+        latEl.value = '';
+        lngEl.value = '';
+        stopAnimation();
+        renderPointsList();
+        drawPreview();
+        if (points.length === 1) map.setView([lat, lng], 6);
+        else fitAll(0.8);
+        nameEl.focus();
+      }
+
+      function movePoint(id, dir) {
+        const idx = points.findIndex(function (p) {
+          return p.id === id;
+        });
+        const newIdx = idx + dir;
+        if (newIdx < 0 || newIdx >= points.length) return;
+        const tmp = points[idx];
+        points[idx] = points[newIdx];
+        points[newIdx] = tmp;
+        stopAnimation();
+        renderPointsList();
+        drawPreview();
+      }
+
+      function deletePoint(id) {
+        points = points.filter(function (p) {
+          return p.id !== id;
+        });
+        stopAnimation();
+        renderPointsList();
+        drawPreview();
+        if (points.length) fitAll(0.8);
+      }
+
+      function clearAll() {
+        points = [];
+        stopAnimation();
+        renderPointsList();
+        drawPreview();
+        map.setView([60, 15], 4);
+      }
+
+      function loadDemo() {
+        points = DEMO_ROUTE.map(function (p) {
+          return { id: 'p' + pointSeq++, name: p.name, lat: p.lat, lng: p.lng, mode: p.mode };
+        });
+        stopAnimation();
+        renderPointsList();
+        drawPreview();
+        fitAll(1);
+        showToast('Demo route loaded — press Play to animate the journey.');
+      }
+
+      /* ---------- animation engine ---------- */
+      function setProgressBar(pct) {
+        progressFill.style.width = Math.max(0, Math.min(100, pct)) + '%';
+      }
+
+      function updatePlayButton() {
+        const btn = document.getElementById('playBtn');
+        const icon = btn.querySelector('i');
+        if (isLoadingRoute) {
+          icon.className = 'fa-solid fa-spinner fa-spin';
+          btn.title = 'Charting route…';
+        } else if (isPlaying && !isPaused) {
+          icon.className = 'fa-solid fa-pause';
+          btn.title = 'Pause';
+        } else {
+          icon.className = 'fa-solid fa-play';
+          btn.title = isPaused ? 'Resume' : 'Play';
+        }
+      }
+
+      function stopAnimation() {
+        runToken++;
+        isPlaying = false;
+        isPaused = false;
+        if (animId) cancelAnimationFrame(animId);
+        animId = null;
+        if (animLayer) animLayer.clearLayers();
+        movingMarker = null;
+        activeLine = null;
+        segIndex = 0;
+        segElapsed = 0;
+        if (progressFill) setProgressBar(0);
+        updatePlayButton();
+        if (legText)
+          legText.textContent =
+            points.length > 1
+              ? 'Ready to play. Press ▶ to begin the journey.'
+              : 'Add at least two waypoints to begin.';
+      }
+
+      function beginSegment(i) {
+        const seg = segments[i];
+        activeLine = L.polyline([], {
+          color: MODES[seg.mode].color,
+          weight: 4.5,
+          opacity: 0.95,
+          dashArray: MODES[seg.mode].dash,
+          lineCap: 'round',
+          lineJoin: 'round',
+          className: 'glow-line glow-' + seg.mode,
+        }).addTo(animLayer);
+        if (movingMarker) {
+          animLayer.removeLayer(movingMarker);
+          movingMarker = null;
+        }
+        movingMarker = L.marker([seg.from.lat, seg.from.lng], {
+          icon: createVehicleIcon(seg.mode),
+          zIndexOffset: 1000,
+        }).addTo(animLayer);
+        setVehicleHeading(movingMarker, bearing(seg.from, seg.to));
+        legText.textContent =
+          'Leg ' +
+          (i + 1) +
+          ' of ' +
+          segments.length +
+          ' · ' +
+          MODES[seg.mode].label +
+          ' · ' +
+          (seg.from.name || 'Point') +
+          ' → ' +
+          (seg.to.name || 'Point');
+      }
+
+      function stepAnimation(ts, myToken) {
+        if (myToken !== runToken) return;
+        if (!isPlaying || isPaused) return;
+
+        const seg = segments[segIndex];
+        const duration = segmentDuration(seg) / speedMultiplier;
+        const elapsed = ts - segStartTS;
+        const t = Math.min(1, elapsed / duration);
+        const et = easeInOutCubic(t);
+        const pos = pointAtT(seg, et);
+        const posAhead = pointAtT(seg, Math.min(1, et + 0.01));
+        const heading = bearing(pos, posAhead);
+
+        const steps = Math.max(2, Math.round(70 * et));
+        const pts = [];
+        for (let i = 0; i < steps; i++) {
+          const tt = (i / (steps - 1)) * et;
+          const p = pointAtT(seg, tt);
+          pts.push([p.lat, p.lng]);
+        }
+        activeLine.setLatLngs(pts);
+        movingMarker.setLatLng([pos.lat, pos.lng]);
+        setVehicleHeading(movingMarker, heading);
+
+        if (!prefersReducedMotion) {
+          cameraCenter = {
+            lat: lerp(cameraCenter.lat, pos.lat, 0.06),
+            lng: lerp(cameraCenter.lng, pos.lng, 0.06),
+          };
+          map.panTo([cameraCenter.lat, cameraCenter.lng], { animate: false });
+        }
+
+        setProgressBar(((segIndex + et) / segments.length) * 100);
+
+        if (t >= 1) {
+          dropWaypointLabel(seg.to, false);
+          segIndex++;
+          if (segIndex >= segments.length) {
+            finishPlayback();
+            return;
+          }
+          setTimeout(function () {
+            if (myToken !== runToken) return;
+            beginSegment(segIndex);
+            segStartTS = performance.now();
+            animId = requestAnimationFrame(function (ts2) {
+              stepAnimation(ts2, myToken);
+            });
+          }, 350);
+          return;
+        }
+
+        segElapsed = elapsed;
+        animId = requestAnimationFrame(function (ts2) {
+          stepAnimation(ts2, myToken);
+        });
+      }
+
+      async function startPlayback() {
+        if (points.length < 2) {
+          showToast('Add at least two waypoints to begin the journey.');
+          return;
+        }
+
+        if (isPaused) {
+          isPaused = false;
+          isPlaying = true;
+          segStartTS = performance.now() - segElapsed;
+          updatePlayButton();
+          const myToken = runToken;
+          animId = requestAnimationFrame(function (ts) {
+            stepAnimation(ts, myToken);
+          });
+          return;
+        }
+
+        if (isPlaying || isLoadingRoute) return;
+
+        stopAnimation();
+        runToken++;
+        const myToken = runToken;
+
+        if (map.hasLayer(previewLayer)) map.removeLayer(previewLayer);
+
+        isLoadingRoute = true;
+        updatePlayButton();
+        legText.textContent = 'Charting real routes…';
+        setProgressBar(0);
+
+        let built = { segments: [], fallbackCount: 0 };
+        try {
+          built = await buildSegments();
+        } catch (err) {
+          console.error('Route building failed', err);
+        }
+        isLoadingRoute = false;
+
+        if (myToken !== runToken) {
+          updatePlayButton();
+          return;
+        }
+
+        if (!built.segments.length) {
+          updatePlayButton();
+          showToast('Could not build the route — try again.');
+          legText.textContent = 'Ready to play. Press ▶ to begin the journey.';
+          return;
+        }
+
+        segments = built.segments;
+        segIndex = 0;
+        segElapsed = 0;
+        isPlaying = true;
+        isPaused = false;
+        updatePlayButton();
+
+        if (built.fallbackCount > 0) {
+          showToast(
+            built.fallbackCount === 1
+              ? 'One leg fell back to a straight line (routing service unavailable).'
+              : built.fallbackCount +
+                  ' legs fell back to straight lines (routing service unavailable).',
+          );
+        }
+
+        const bounds = L.latLngBounds(
+          points.map(function (p) {
+            return [p.lat, p.lng];
+          }),
+        );
+        cameraCenter = map.getCenter();
+        map.flyToBounds(bounds, { padding: [90, 90], duration: 1.4, maxZoom: 8 });
+        dropWaypointLabel(points[0], true);
+        legText.textContent = 'Charting the course…';
+
+        setTimeout(function () {
+          if (myToken !== runToken) return;
+          beginSegment(segIndex);
+          segStartTS = performance.now();
+          animId = requestAnimationFrame(function (ts) {
+            stepAnimation(ts, myToken);
+          });
+        }, 1500);
+      }
+
+      function pausePlayback() {
+        if (!isPlaying || isPaused) return;
+        isPaused = true;
+        if (animId) cancelAnimationFrame(animId);
+        updatePlayButton();
+      }
+
+      function finishPlayback() {
+        isPlaying = false;
+        isPaused = false;
+        updatePlayButton();
+        setProgressBar(100);
+        fitAll(1.2);
+        showToast('Journey complete ✓');
+        legText.textContent =
+          'Journey complete — ' +
+          segments.length +
+          (segments.length === 1 ? ' leg' : ' legs') +
+          ' travelled.';
+      }
+
+      function resetPlayback() {
+        stopAnimation();
+        if (!map.hasLayer(previewLayer)) previewLayer.addTo(map);
+        drawPreview();
+        if (points.length) fitAll(1);
+      }
+
+      /* ================= animated export (GIF / WebM) =================
+   The live player is driven by requestAnimationFrame + wall-clock, which can't
+   be captured reliably (rasterising a frame is far slower than 1/fps). So export
+   uses a *deterministic* stepper: exportRenderAt(ms) renders the exact frame for
+   a timestamp and we walk it sequentially, rasterising with the canvas
+   compositor below. Output timing comes from the encoder, not real time. */
+      const EXPORT = {
+        fps: 15,
+        introMs: 700,
+        pauseMs: 350,
+        outroMs: 1400,
+        maxWidth: 960,
+        running: false,
+        /* Keep the camera still and framed on the whole route. The live player
+     follows the vehicle, which is nice on screen but bad for a shareable clip:
+     it ends up centred on the last stop (e.g. Galle, on the south coast) with
+     half the frame empty ocean, and earlier legs scroll out of view. */
+        followCamera: false,
+        /* The live player caps at zoom 8 so a fly-in reads well. For an export we fit
+     the route itself, so allow closer zoom — otherwise a small country renders
+     tiny in a sea of blank water. */
+        maxZoom: 13,
+        padding: 70,
+      };
+
+      let expSegIdx = -1;
+      let expLastLabelDropped = false;
+      let _gifenc = null;
+
+      async function loadGifenc() {
+        if (!_gifenc) _gifenc = await import('https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm');
+        return _gifenc;
+      }
+
+      /* ---------- canvas compositor ----------
+   We rasterise the map ourselves rather than using a DOM-to-image library.
+   Those libraries wrap the cloned DOM in an <svg><foreignObject>, and Chrome
+   takes tens of seconds to decode that for a map this complex (measured: >45s
+   for a single frame — unusable). Drawing the layers directly is ~2 orders of
+   magnitude faster because the tiles are already-decoded <img>s and Leaflet's
+   vector overlay is already real SVG. */
+      function loadImage(url) {
+        return new Promise(function (res, rej) {
+          const img = new Image();
+          img.onload = function () {
+            res(img);
+          };
+          img.onerror = function () {
+            rej(new Error('image load failed'));
+          };
+          img.src = url;
+        });
+      }
+
+      /* Serialise a live <svg> element to an <img>. Pure SVG (no foreignObject)
+   decodes in ~2-6ms. Leaflet sets stroke/fill as attributes, so styling
+   survives; only CSS filter glows are lost. */
+      async function svgElToImage(svgEl, w, h) {
+        const clone = svgEl.cloneNode(true);
+        clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        clone.setAttribute('width', w);
+        clone.setAttribute('height', h);
+        /* Leaflet positions the overlay <svg> with an inline CSS transform AND gives it
+     a matching viewBox origin. We already place the rasterised image using the
+     element's on-screen rect (which includes that transform), so the clone must
+     not re-apply it — otherwise the offset is counted twice and the route draws
+     shifted off into the sea. */
+        clone.style.transform = 'none';
+        clone.style.position = 'static';
+        clone.style.left = 'auto';
+        clone.style.top = 'auto';
+        const markup = new XMLSerializer().serializeToString(clone);
+        const url = URL.createObjectURL(
+          new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }),
+        );
+        try {
+          return await loadImage(url);
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      }
+
+      function roundRectPath(ctx, x, y, w, h, r) {
+        const rr = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rr, y);
+        ctx.arcTo(x + w, y, x + w, y + h, rr);
+        ctx.arcTo(x + w, y + h, x, y + h, rr);
+        ctx.arcTo(x, y + h, x, y, rr);
+        ctx.arcTo(x, y, x + w, y, rr);
+        ctx.closePath();
+      }
+
+      /* Markers are HTML divIcons, so we redraw them with canvas primitives, reading
+   the live computed styles so this stays in sync with the CSS. */
+      async function drawMarkerEl(ctx, el, mr, scale) {
+        const px = function (v) {
+          return v * scale;
+        };
+        const elStyle = window.getComputedStyle(el);
+        if (elStyle.display === 'none' || elStyle.visibility === 'hidden') return;
+        const alpha = parseFloat(elStyle.opacity);
+        ctx.save();
+        ctx.globalAlpha = isNaN(alpha) ? 1 : alpha;
+
+        const vsvg = el.querySelector('svg.vehicle-svg');
+        if (vsvg) {
+          const glowEl = el.querySelector('.vehicle-glow');
+          if (glowEl) {
+            const gr = glowEl.getBoundingClientRect();
+            const cx = px(gr.left - mr.left + gr.width / 2);
+            const cy = px(gr.top - mr.top + gr.height / 2);
+            const rad = Math.max(1, px(gr.width));
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+            grad.addColorStop(0, window.getComputedStyle(glowEl).backgroundColor);
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.save();
+            ctx.globalAlpha = (isNaN(alpha) ? 1 : alpha) * 0.55;
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+          const r = vsvg.getBoundingClientRect();
+          if (r.width && r.height) {
+            try {
+              const img = await svgElToImage(vsvg, r.width, r.height);
+              ctx.drawImage(
+                img,
+                px(r.left - mr.left),
+                px(r.top - mr.top),
+                px(r.width),
+                px(r.height),
+              );
+            } catch (e) {}
+          }
+          ctx.restore();
+          return;
+        }
+
+        const dot = el.querySelector('.wp-dot');
+        if (dot) {
+          const r = dot.getBoundingClientRect();
+          const cs = window.getComputedStyle(dot);
+          if (r.width) {
+            const cx = px(r.left - mr.left + r.width / 2);
+            const cy = px(r.top - mr.top + r.height / 2);
+            const rad = px(r.width / 2);
+            ctx.save();
+            ctx.shadowColor = cs.backgroundColor;
+            ctx.shadowBlur = px(8);
+            ctx.fillStyle = cs.backgroundColor;
+            ctx.beginPath();
+            ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+
+        const plaque = el.querySelector('.wp-plaque');
+        if (plaque && plaque.textContent.trim()) {
+          const r = plaque.getBoundingClientRect();
+          const cs = window.getComputedStyle(plaque);
+          if (r.width && r.height) {
+            const x = px(r.left - mr.left),
+              y = px(r.top - mr.top);
+            const w = px(r.width),
+              h = px(r.height);
+            roundRectPath(ctx, x, y, w, h, px(parseFloat(cs.borderTopLeftRadius) || 6));
+            ctx.fillStyle = cs.backgroundColor;
+            ctx.fill();
+            const bw = parseFloat(cs.borderTopWidth) || 0;
+            if (bw > 0) {
+              ctx.lineWidth = px(bw);
+              ctx.strokeStyle = cs.borderTopColor;
+              ctx.stroke();
+            }
+            ctx.fillStyle = cs.color;
+            ctx.font =
+              (cs.fontWeight || '600') +
+              ' ' +
+              px(parseFloat(cs.fontSize) || 12) +
+              'px ' +
+              cs.fontFamily;
+            ctx.textBaseline = 'middle';
+            ctx.textAlign = 'left';
+            ctx.fillText(
+              plaque.textContent.trim(),
+              x + px(parseFloat(cs.paddingLeft) || 8),
+              y + h / 2,
+            );
+          }
+        }
+        ctx.restore();
+      }
+
+      /* The legend lives outside #map, so redraw it onto the frame. */
+      function drawLegend(ctx, W, scale) {
+        const px = function (v) {
+          return v * scale;
+        };
+        const rows = [
+          ['Land', MODES.road],
+          ['Flights', MODES.flight],
+          ['Cruise', MODES.cruise],
+          ['Rail', MODES.rail],
+        ];
+        const padX = px(16),
+          padY = px(12),
+          rowH = px(20),
+          swatch = px(22),
+          gap = px(9);
+        const w = px(150);
+        const h = padY * 2 + px(14) + rows.length * rowH;
+        const x = W - w - px(16),
+          y = px(16);
+        roundRectPath(ctx, x, y, w, h, px(12));
+        ctx.fillStyle = 'rgba(10,17,40,0.86)';
+        ctx.fill();
+        ctx.lineWidth = Math.max(1, px(1));
+        ctx.strokeStyle = 'rgba(201,162,39,0.35)';
+        ctx.stroke();
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#c9a227';
+        ctx.font = '600 ' + px(10.5) + 'px ui-monospace, SFMono-Regular, Menlo, monospace';
+        ctx.fillText('LEGEND', x + padX, y + padY + px(6));
+        rows.forEach(function (row, i) {
+          const cy = y + padY + px(20) + i * rowH + rowH / 2;
+          ctx.save();
+          ctx.strokeStyle = row[1].color;
+          ctx.lineWidth = px(3);
+          ctx.setLineDash(
+            row[1].dash
+              ? row[1].dash.split(' ').map(function (n) {
+                  return px(parseFloat(n));
+                })
+              : [],
+          );
+          ctx.beginPath();
+          ctx.moveTo(x + padX, cy);
+          ctx.lineTo(x + padX + swatch, cy);
+          ctx.stroke();
+          ctx.restore();
+          ctx.fillStyle = '#eef1f6';
+          ctx.font =
+            '400 ' +
+            px(12) +
+            'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.fillText(row[0], x + padX + swatch + gap, cy);
+        });
+      }
+
+      /* Composites one frame: tiles -> vector overlay -> markers/labels -> legend. */
+      async function renderMapToCanvas(scale) {
+        const mapEl = document.getElementById('map');
+        const mr = mapEl.getBoundingClientRect();
+        const W = Math.max(2, Math.round(mr.width * scale));
+        const H = Math.max(2, Math.round(mr.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = W;
+        canvas.height = H;
+        const ctx = canvas.getContext('2d');
+        const px = function (v) {
+          return v * scale;
+        };
+
+        ctx.fillStyle = '#f8f9fa';
+        ctx.fillRect(0, 0, W, H);
+
+        /* 1) tiles — already decoded and CORS-clean, so drawImage is instant */
+        const tiles = mapEl.querySelectorAll('img.leaflet-tile');
+        for (let i = 0; i < tiles.length; i++) {
+          const img = tiles[i];
+          if (!img.complete || !img.naturalWidth) continue;
+          const r = img.getBoundingClientRect();
+          if (r.right < mr.left || r.left > mr.right || r.bottom < mr.top || r.top > mr.bottom)
+            continue;
+          /* Leaflet fades tiles in via requestAnimationFrame, which is throttled in
+       background tabs — a loaded tile can sit at opacity 0 forever and the frame
+       would come out blank. A loaded tile is always fully opaque for our purposes. */
+          let op = parseFloat(window.getComputedStyle(img).opacity);
+          if (isNaN(op)) op = 1;
+          if (img.classList.contains('leaflet-tile-loaded')) op = 1;
+          ctx.globalAlpha = op;
+          try {
+            ctx.drawImage(img, px(r.left - mr.left), px(r.top - mr.top), px(r.width), px(r.height));
+          } catch (e) {}
+        }
+        ctx.globalAlpha = 1;
+
+        /* 2) vector overlay (the route polylines) */
+        const svgs = mapEl.querySelectorAll('.leaflet-overlay-pane svg');
+        for (let i = 0; i < svgs.length; i++) {
+          const svg = svgs[i];
+          const r = svg.getBoundingClientRect();
+          if (!r.width || !r.height) continue;
+          try {
+            const img = await svgElToImage(svg, r.width, r.height);
+            ctx.drawImage(img, px(r.left - mr.left), px(r.top - mr.top), px(r.width), px(r.height));
+          } catch (e) {}
+        }
+
+        /* 3) markers: vehicle + waypoint labels */
+        const markers = mapEl.querySelectorAll('.leaflet-marker-pane > *');
+        for (let i = 0; i < markers.length; i++) {
+          await drawMarkerEl(ctx, markers[i], mr, scale);
+        }
+
+        /* 4) legend */
+        drawLegend(ctx, W, scale);
+        return canvas;
+      }
+
+      function post(msg) {
+        try {
+          if (window.parent && window.parent !== window) window.parent.postMessage(msg, '*');
+        } catch (e) {}
+      }
+      function setExportStatus(label, progress) {
+        const s = document.getElementById('exportStatus');
+        const f = document.getElementById('exportFill');
+        if (s) s.textContent = label;
+        if (f && typeof progress === 'number') f.style.width = Math.round(progress * 100) + '%';
+        post({ type: 'route-export-progress', label: label, progress: progress });
+      }
+      /* Yield so Leaflet can flush its DOM updates. requestAnimationFrame is paused in
+   background tabs, so race it against a timer — otherwise an export stalls
+   forever the moment the user switches tabs. We only need the DOM updated (we
+   rasterise the DOM, not the painted output), so the timer path is equivalent. */
+      function nextFrame() {
+        return new Promise(function (r) {
+          let done = false;
+          const fin = function () {
+            if (done) return;
+            done = true;
+            r();
+          };
+          requestAnimationFrame(function () {
+            requestAnimationFrame(fin);
+          });
+          setTimeout(fin, 60);
+        });
+      }
+      /* Leaflet loads tiles asynchronously while the camera pans; capturing before
+   they arrive yields half-blank frames. */
+      function waitForTiles(timeoutMs) {
+        return new Promise(function (resolve) {
+          if (!tilesLoading) return resolve();
+          let done = false;
+          const finish = function () {
+            if (done) return;
+            done = true;
+            if (tileLayer) tileLayer.off('load', finish);
+            clearTimeout(timer);
+            resolve();
+          };
+          const timer = setTimeout(finish, timeoutMs || 2000);
+          if (tileLayer) tileLayer.on('load', finish);
+          else finish();
+        });
+      }
+
+      function exportTotalMs() {
+        let total = EXPORT.introMs + EXPORT.outroMs;
+        for (let i = 0; i < segments.length; i++) {
+          total += segmentDuration(segments[i]);
+          if (i < segments.length - 1) total += EXPORT.pauseMs;
+        }
+        return total;
+      }
+
+      function exportRenderSeg(i, localT) {
+        if (expSegIdx !== i) {
+          if (expSegIdx >= 0 && expSegIdx < i) dropWaypointLabel(segments[expSegIdx].to, false);
+          expSegIdx = i;
+          beginSegment(i);
+        }
+        const seg = segments[i];
+        const et = easeInOutCubic(Math.max(0, Math.min(1, localT)));
+        const pos = pointAtT(seg, et);
+        const posAhead = pointAtT(seg, Math.min(1, et + 0.01));
+        const heading = bearing(pos, posAhead);
+        const steps = Math.max(2, Math.round(70 * et));
+        const pts = [];
+        for (let k = 0; k < steps; k++) {
+          const p = pointAtT(seg, (k / (steps - 1)) * et);
+          pts.push([p.lat, p.lng]);
+        }
+        activeLine.setLatLngs(pts);
+        movingMarker.setLatLng([pos.lat, pos.lng]);
+        setVehicleHeading(movingMarker, heading);
+        if (EXPORT.followCamera) {
+          /* match the live 0.06-per-60fps camera smoothing at our export frame rate */
+          const alpha = 1 - Math.pow(1 - 0.06, 60 / EXPORT.fps);
+          cameraCenter = {
+            lat: lerp(cameraCenter.lat, pos.lat, alpha),
+            lng: lerp(cameraCenter.lng, pos.lng, alpha),
+          };
+          map.panTo([cameraCenter.lat, cameraCenter.lng], { animate: false });
+        }
+        setProgressBar(((i + et) / segments.length) * 100);
+      }
+      function exportRenderAt(ms) {
+        if (ms <= EXPORT.introMs) {
+          setProgressBar(0);
+          return;
+        }
+        let t = ms - EXPORT.introMs;
+        for (let i = 0; i < segments.length; i++) {
+          const dur = segmentDuration(segments[i]);
+          if (t <= dur) {
+            exportRenderSeg(i, t / dur);
+            return;
+          }
+          t -= dur;
+          if (i < segments.length - 1) {
+            if (t <= EXPORT.pauseMs) {
+              exportRenderSeg(i, 1);
+              return;
+            }
+            t -= EXPORT.pauseMs;
+          }
+        }
+        exportRenderSeg(segments.length - 1, 1);
+        if (!expLastLabelDropped) {
+          dropWaypointLabel(segments[segments.length - 1].to, false);
+          expLastLabelDropped = true;
+          setProgressBar(100);
+          legText.textContent =
+            'Journey complete — ' +
+            segments.length +
+            (segments.length === 1 ? ' leg' : ' legs') +
+            ' travelled.';
+        }
+      }
+
+      async function prepareExport() {
+        if (points.length < 2) throw new Error('Add at least two waypoints first.');
+        stopAnimation();
+        runToken++;
+        if (map.hasLayer(previewLayer)) map.removeLayer(previewLayer);
+
+        setExportStatus('Charting real routes…', 0.02);
+        const built = await buildSegments();
+        if (!built.segments.length) throw new Error('Could not build the route.');
+        segments = built.segments;
+
+        expSegIdx = -1;
+        expLastLabelDropped = false;
+        document.body.classList.add('exporting');
+        animLayer.clearLayers();
+        movingMarker = null;
+        activeLine = null;
+
+        /* Frame the real route geometry, not just the waypoints — a road/sea leg can
+     bulge far outside the straight line between two stops, and fitting only the
+     stops would crop it. */
+        const bounds = L.latLngBounds(
+          points.map(function (p) {
+            return [p.lat, p.lng];
+          }),
+        );
+        segments.forEach(function (seg) {
+          seg.path.forEach(function (pt) {
+            bounds.extend([pt[0], pt[1]]);
+          });
+        });
+        map.invalidateSize();
+        /* Leaflet snaps to integer zoom levels by default, so fitBounds rounds *down*
+     and can leave the route at half the size it could be. Allow fractional zoom
+     just for the export fit so the route actually fills the frame. */
+        const prevSnap = map.options.zoomSnap;
+        map.options.zoomSnap = 0;
+        map.fitBounds(bounds, {
+          padding: [EXPORT.padding, EXPORT.padding],
+          maxZoom: EXPORT.maxZoom,
+          animate: false,
+        });
+        map.options.zoomSnap = prevSnap;
+        cameraCenter = map.getCenter();
+        dropWaypointLabel(points[0], true);
+        await waitForTiles(5000);
+        await nextFrame();
+      }
+
+      function finishExport() {
+        document.body.classList.remove('exporting');
+        document.getElementById('exportOverlay').classList.remove('is-active');
+        resetPlayback();
+      }
+
+      /* Walks the timeline once, handing each rasterised frame to onFrame(). */
+      async function captureFrames(onFrame, onProgress) {
+        const mapEl = document.getElementById('map');
+        const totalMs = exportTotalMs();
+        const frameCount = Math.max(2, Math.ceil((totalMs / 1000) * EXPORT.fps));
+        const scale = Math.min(1, EXPORT.maxWidth / Math.max(1, mapEl.clientWidth));
+
+        for (let i = 0; i < frameCount; i++) {
+          exportRenderAt((i / (frameCount - 1)) * totalMs);
+          await waitForTiles(1500);
+          await nextFrame();
+          const canvas = await renderMapToCanvas(scale);
+          await onFrame(canvas, i, frameCount);
+          if (onProgress) onProgress((i + 1) / frameCount);
+        }
+      }
+
+      async function exportGif() {
+        const gifenc = await loadGifenc();
+        const GIFEncoder = gifenc.GIFEncoder,
+          quantize = gifenc.quantize,
+          applyPalette = gifenc.applyPalette;
+        const gif = GIFEncoder();
+        const delay = Math.round(1000 / EXPORT.fps);
+        let work = null,
+          wctx = null;
+
+        await captureFrames(
+          function (canvas) {
+            if (!work) {
+              work = document.createElement('canvas');
+              work.width = canvas.width;
+              work.height = canvas.height;
+              wctx = work.getContext('2d', { willReadFrequently: true });
+            }
+            wctx.drawImage(canvas, 0, 0, work.width, work.height);
+            const data = wctx.getImageData(0, 0, work.width, work.height).data;
+            const palette = quantize(data, 256);
+            const index = applyPalette(data, palette);
+            gif.writeFrame(index, work.width, work.height, { palette: palette, delay: delay });
+          },
+          function (p) {
+            setExportStatus('Rendering frames… ' + Math.round(p * 100) + '%', 0.02 + p * 0.9);
+          },
+        );
+
+        setExportStatus('Encoding GIF…', 0.95);
+        await nextFrame();
+        gif.finish();
+        return new Blob([gif.bytes()], { type: 'image/gif' });
+      }
+
+      /* WebCodecs gives each frame an explicit timestamp, so the encode is
+   deterministic and runs as fast as the CPU allows. The obvious alternative,
+   MediaRecorder, timestamps frames by wall clock — that forces a real-time
+   playback pass, and browsers throttle background tabs (setTimeout is clamped to
+   ~1/sec), which silently produces a slow-motion video. Hence WebCodecs first. */
+      async function exportWebmWebCodecs() {
+        const muxerMod = await import('https://cdn.jsdelivr.net/npm/webm-muxer@5.0.3/+esm');
+        const Muxer = muxerMod.Muxer,
+          ArrayBufferTarget = muxerMod.ArrayBufferTarget;
+        let muxer = null,
+          encoder = null,
+          frameIndex = 0;
+        const usPerFrame = 1e6 / EXPORT.fps;
+
+        await captureFrames(
+          function (canvas) {
+            if (!muxer) {
+              muxer = new Muxer({
+                target: new ArrayBufferTarget(),
+                video: {
+                  codec: 'V_VP9',
+                  width: canvas.width,
+                  height: canvas.height,
+                  frameRate: EXPORT.fps,
+                },
+              });
+              encoder = new VideoEncoder({
+                output: function (chunk, meta) {
+                  muxer.addVideoChunk(chunk, meta);
+                },
+                error: function (e) {
+                  console.error('VideoEncoder', e);
+                },
+              });
+              encoder.configure({
+                codec: 'vp09.00.10.08',
+                width: canvas.width,
+                height: canvas.height,
+                bitrate: 6000000,
+                framerate: EXPORT.fps,
+              });
+            }
+            const frame = new VideoFrame(canvas, {
+              timestamp: frameIndex * usPerFrame,
+              duration: usPerFrame,
+            });
+            encoder.encode(frame, { keyFrame: frameIndex % (EXPORT.fps * 2) === 0 });
+            frame.close();
+            frameIndex++;
+          },
+          function (p) {
+            setExportStatus('Rendering frames… ' + Math.round(p * 100) + '%', 0.02 + p * 0.9);
+          },
+        );
+
+        if (!encoder) throw new Error('No frames captured.');
+        setExportStatus('Encoding video…', 0.95);
+        await encoder.flush();
+        encoder.close();
+        muxer.finalize();
+        return new Blob([muxer.target.buffer], { type: 'video/webm' });
+      }
+
+      /* Fallback for browsers without WebCodecs: capture to JPEGs, then replay them
+   into MediaRecorder at real speed. Requires the tab to stay in the foreground. */
+      async function exportWebmMediaRecorder() {
+        const blobs = [];
+        let w = 0,
+          h = 0;
+        await captureFrames(
+          async function (canvas) {
+            w = canvas.width;
+            h = canvas.height;
+            const blob = await new Promise(function (r) {
+              canvas.toBlob(r, 'image/jpeg', 0.92);
+            });
+            if (blob) blobs.push(blob);
+          },
+          function (p) {
+            setExportStatus('Rendering frames… ' + Math.round(p * 100) + '%', 0.02 + p * 0.78);
+          },
+        );
+        if (!blobs.length) throw new Error('No frames captured.');
+        setExportStatus('Encoding video…', 0.82);
+
+        const out = document.createElement('canvas');
+        out.width = w;
+        out.height = h;
+        const octx = out.getContext('2d');
+        const stream = out.captureStream(0);
+        const track = stream.getVideoTracks()[0];
+        const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].filter(
+          function (m) {
+            return window.MediaRecorder && MediaRecorder.isTypeSupported(m);
+          },
+        )[0];
+        if (!mime) throw new Error('This browser cannot record WebM.');
+
+        const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8000000 });
+        const chunks = [];
+        rec.ondataavailable = function (e) {
+          if (e.data && e.data.size) chunks.push(e.data);
+        };
+        const stopped = new Promise(function (r) {
+          rec.onstop = r;
+        });
+        rec.start();
+
+        const interval = 1000 / EXPORT.fps;
+        const t0 = performance.now();
+        let nextBmp = createImageBitmap(blobs[0]);
+        for (let i = 0; i < blobs.length; i++) {
+          const bmp = await nextBmp;
+          if (i + 1 < blobs.length) nextBmp = createImageBitmap(blobs[i + 1]);
+          octx.drawImage(bmp, 0, 0);
+          if (track.requestFrame) track.requestFrame();
+          if (bmp.close) bmp.close();
+          const wait = t0 + (i + 1) * interval - performance.now();
+          if (wait > 0)
+            await new Promise(function (r) {
+              setTimeout(r, wait);
+            });
+          setExportStatus('Encoding video…', 0.82 + (i / blobs.length) * 0.15);
+        }
+        await new Promise(function (r) {
+          setTimeout(r, 300);
+        });
+        rec.stop();
+        await stopped;
+        return new Blob(chunks, { type: 'video/webm' });
+      }
+
+      async function exportWebm() {
+        if (typeof VideoEncoder !== 'undefined') {
+          try {
+            return await exportWebmWebCodecs();
+          } catch (e) {
+            console.warn('WebCodecs export failed, falling back to MediaRecorder', e);
+          }
+        }
+        return await exportWebmMediaRecorder();
+      }
+
+      async function runExport(format) {
+        if (EXPORT.running) return;
+        EXPORT.running = true;
+        document.getElementById('exportOverlay').classList.add('is-active');
+        setExportStatus('Preparing…', 0);
+        post({ type: 'route-export-start', format: format });
+        try {
+          await prepareExport();
+          const blob = format === 'gif' ? await exportGif() : await exportWebm();
+          setExportStatus('Done ✓', 1);
+          post({ type: 'route-export-done', format: format, blob: blob, size: blob.size });
+        } catch (err) {
+          console.error('Export failed', err);
+          showToast('Export failed: ' + ((err && err.message) || 'unknown error'));
+          post({ type: 'route-export-error', message: String((err && err.message) || err) });
+        } finally {
+          EXPORT.running = false;
+          finishExport();
+        }
+      }
+
+      /* ---------- init ---------- */
+      function init() {
+        legText = document.getElementById('legText');
+        progressFill = document.getElementById('progressFill');
+        toastEl = document.getElementById('toast');
+
+        map = L.map('map', { zoomControl: false, worldCopyJump: true }).setView([60, 15], 4);
+        /* crossOrigin is required so the tiles can be rasterised into a canvas for
+       the GIF/WebM export — without it the canvas is tainted and comes out blank.
+       CARTO serves the basemaps with Access-Control-Allow-Origin: *. */
+        tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+          subdomains: 'abcd',
+          maxZoom: 19,
+          crossOrigin: true,
+        }).addTo(map);
+        tileLayer.on('loading', function () {
+          tilesLoading = true;
+        });
+        tileLayer.on('load', function () {
+          tilesLoading = false;
+        });
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        previewLayer = L.layerGroup().addTo(map);
+        animLayer = L.layerGroup().addTo(map);
+
+        map.on('click', function (e) {
+          document.getElementById('inLat').value = e.latlng.lat.toFixed(4);
+          document.getElementById('inLng').value = e.latlng.lng.toFixed(4);
+          showToast('Coordinates captured — name it and press Add Point.');
+        });
+
+        document.getElementById('playBtn').addEventListener('click', function () {
+          if (isLoadingRoute) return;
+          if (isPlaying && !isPaused) pausePlayback();
+          else startPlayback();
+        });
+        document.getElementById('resetBtn').addEventListener('click', resetPlayback);
+        document.getElementById('speedSlider').addEventListener('input', function (e) {
+          speedMultiplier = parseFloat(e.target.value);
+          document.getElementById('speedReadout').textContent = speedMultiplier.toFixed(2) + '×';
+        });
+        document.getElementById('panelToggle').addEventListener('click', function () {
+          document.getElementById('controlPanel').classList.toggle('collapsed');
+          document.getElementById('panelToggle').classList.toggle('is-collapsed');
+        });
+
+        window.addEventListener('message', function (e) {
+          if (e.data && e.data.type === 'route-export') {
+            runExport(e.data.format === 'gif' ? 'gif' : 'webm');
+            return;
+          }
+          if (Array.isArray(e.data)) {
+            points = e.data;
+            renderPointsList();
+            resetPlayback();
+            if (points.length > 1) {
+              startPlayback();
+            } else if (points.length === 1) {
+              fitAll(1);
+            }
+          }
+        });
+
+        renderPointsList();
+        updatePlayButton();
+        loadSeaRoute().catch(function () {
+          /* silently retried per-segment on first cruise leg */
+        });
+      }
+
+      init();
+    </script>
+  </body>
+</html>

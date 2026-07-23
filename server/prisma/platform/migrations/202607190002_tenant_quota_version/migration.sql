@@ -1,0 +1,1 @@
+ALTER TABLE `tenants` ADD COLUMN `quota_version` INTEGER NOT NULL DEFAULT 0;

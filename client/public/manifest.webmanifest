@@ -1,0 +1,9 @@
+{
+  "name": "MooNs Traveller Hub",
+  "short_name": "MooNs Trips",
+  "start_url": "/traveller-hub",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#075985",
+  "icons": [{ "src": "/favicon.ico", "sizes": "256x256", "type": "image/x-icon" }]
+}

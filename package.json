@@ -1,0 +1,60 @@
+{
+  "name": "moonsconfig",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "setup:env": "node scripts/setup-local-env.mjs",
+    "secrets:check": "node scripts/check-for-secrets.mjs",
+    "dev": "concurrently -k -n client,api,worker -c cyan,green,magenta \"npm:dev:client\" \"npm:dev:server\" \"npm:dev:worker\"",
+    "dev:app": "concurrently -n client,api -c cyan,green \"npm:dev:client:wait\" \"npm:dev:server\"",
+    "dev:client": "npm run dev --workspace @moonsconfig/client",
+    "dev:client:wait": "node scripts/wait-for-api.mjs && npm run dev:client",
+    "dev:server": "npm run dev --workspace @moonsconfig/server",
+    "dev:worker": "npm run worker:dev --workspace @moonsconfig/server",
+    "build": "npm run build --workspaces --if-present",
+    "preview": "npm run preview --workspace @moonsconfig/client",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test:setup-env && npm run test --workspaces --if-present",
+    "test:setup-env": "node --test scripts/setup-local-env.test.mjs",
+    "format": "prettier --write client server nginx docs scripts .github README.md CONTRIBUTING.md SECURITY.md docker-compose.yml .gitlab-ci.yml .prettierrc.json package.json",
+    "format:check": "prettier --check client server nginx docs scripts .github README.md CONTRIBUTING.md SECURITY.md docker-compose.yml .gitlab-ci.yml .prettierrc.json package.json",
+    "manifest:generate": "node scripts/generate-migration-manifest.mjs",
+    "prisma:generate": "npm run prisma:generate --workspace @moonsconfig/server",
+    "prisma:deploy": "npm run prisma:deploy --workspace @moonsconfig/server",
+    "prisma:deploy:platform": "npm run prisma:deploy:platform --workspace @moonsconfig/server",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "start": "docker compose up -d",
+    "stop": "docker compose down",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.32.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^15.15.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.7.3",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.56.1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,md,yml,yaml}": "prettier --write"
+  }
+}
